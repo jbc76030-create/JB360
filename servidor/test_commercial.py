@@ -5,7 +5,7 @@ def test_parties_invoice_and_roles():
  with tempfile.TemporaryDirectory() as d:
   os.environ['JB360_DB']=d+'/db.sqlite3';os.environ['JB360_ADMIN_PASSWORD']='Admin-Password-2026-Strong'
   sys.path.insert(0,os.path.dirname(__file__))
-  for n in ('fiscal2026','normativa_control','catalogo_api','versat_bridge','commercial','extension','server'):sys.modules.pop(n,None)
+  for n in ('vector_fiscal', 'fiscal2026','normativa_control','catalogo_api','versat_bridge','commercial','extension','server'):sys.modules.pop(n,None)
   s=importlib.import_module('server')
   with TestClient(s.app) as c:
    def auth(user,password):
