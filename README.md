@@ -2,9 +2,11 @@
 
 Aplicación de gestión comercial para registrar productos, servicios, ventas, devoluciones, existencias, caja, cobros electrónicos, gastos, reservas e informes. Incluye un perfil para distintos actores económicos cubanos y libros auxiliares de ingresos y gastos exportables a CSV.
 
-## Empezar
+## Abrir la app
 
-Abre `index.html` en un navegador moderno. Para usarlo desde GitHub Pages, activa **Settings → Pages → Build and deployment → GitHub Actions** en este repositorio. La publicación existente en `.github/workflows/pages.yml` se ejecuta al actualizar `main` o manualmente desde Actions. También puedes descargar `index.html` y abrirlo localmente sin conexión; algunos navegadores limitan el almacenamiento de archivos `file://`, así que comprueba que tus registros sigan allí después de cerrar y volver a abrir, y conserva un respaldo JSON.
+Abre **[JB360 en el navegador](https://jbc76030-create.github.io/Web/jb360/)**. El código principal está en este repositorio y la copia publicada está en la carpeta `jb360/` del repositorio `Web`, que ya tiene GitHub Pages habilitado. La página `Web/oficina/` es un proyecto independiente. Al cambiar el código, hay que actualizar `index.html` en ambos repositorios; las modificaciones en uno no se copian al otro automáticamente.
+
+También puedes descargar `index.html` y abrirlo localmente sin conexión; algunos navegadores limitan el almacenamiento de archivos `file://`, así que comprueba que tus registros sigan allí después de cerrar y volver a abrir, y conserva un respaldo JSON.
 
 1. En **Perfil económico**, selecciona el actor y guarda los datos del negocio.
 2. En **Productos** y **Servicios**, crea y actualiza el catálogo. La instalación nueva empieza vacía. Las existencias se cambian con movimientos de inventario y las ventas anteriores conservan sus importes originales.
