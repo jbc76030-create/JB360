@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 def test_registro_y_lotes():
     with tempfile.TemporaryDirectory() as td:
         os.environ['JB360_DB']=td+'/test.sqlite3';os.environ['JB360_ADMIN_PASSWORD']='TestAdmin_2026!'
-        for name in ('fiscal2026','normativa_control','catalogo_api','versat_bridge','commercial','extension','server'):
+        for name in ('vector_fiscal', 'fiscal2026','normativa_control','catalogo_api','versat_bridge','commercial','extension','server'):
             sys.modules.pop(name,None)
         server=importlib.import_module('server')
         from normativa_control import REG
