@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from server import app, conn
 from extension import licensed
+from vector_fiscal import current_vector
 
 
 FUENTES = {
@@ -76,6 +77,7 @@ def simulate(x: Simulation):
         raise HTTPException(422, 'Esta situación solo corresponde a personas jurídicas estatales')
     if x.actor == 'estatal' and x.situation != 'state_retail_to_population':
         raise HTTPException(422, 'Para estatal se requiere confirmar venta minorista o servicio a la población')
+    obligations = current_vector(x.actor, x.month, x.situation)
     goods = amount(x.goods_base, 'Ventas gravadas')
     services = amount(x.services_base, 'Servicios gravados')
     profit = amount(x.taxable_profit, 'Utilidad imponible anual', optional=True)
@@ -91,28 +93,43 @@ def simulate(x: Simulation):
         lines.append({'concepto': label, 'periodicidad_base': frequency, 'base_cents': base,
                       'tipo': rate, 'estimado_cents': tax, 'fuente': FUENTES[source]})
 
-    if x.actor == 'pdl' and x.situation == 'pdl_minindustry_food':
-        add('Ventas minoristas de alimentos de minindustria PDL', goods, '5 %', 'pdl', fraction=(5, 100))
-        add('Otros servicios gravados PDL', services, '10 %', 'pdl', fraction=(10, 100))
-    else:
-        source = 'tcp' if x.actor == 'tcp' else 'pdl' if x.actor == 'pdl' else 'mipyme' if x.actor == 'mipyme' else 'presupuesto'
-        add('Ventas y servicios gravados', goods + services, '10 %', source, fraction=(10, 100))
+    if 'sales_services' in obligations:
+        if x.actor == 'pdl' and x.situation == 'pdl_minindustry_food':
+            add('Ventas minoristas de alimentos de minindustria PDL', goods, '5 %', 'pdl', fraction=(5, 100))
+            add('Otros servicios gravados PDL', services, '10 %', 'pdl', fraction=(10, 100))
+        else:
+            source = 'tcp' if x.actor == 'tcp' else 'pdl' if x.actor == 'pdl' else 'mipyme' if x.actor == 'mipyme' else 'presupuesto'
+            add('Ventas y servicios gravados', goods + services, '10 %', source, fraction=(10, 100))
+    elif goods or services:
+        raise HTTPException(422, 'El vector revisado no habilita este concepto; no introduzca base de ventas o servicios')
 
-    if x.actor == 'tcp' and personal is not None:
+    if x.actor == 'tcp' and personal is not None and 'tcp_personal_advance' in obligations:
         excess = max(0, personal - 326000)
         add('Anticipo de ingresos personales TCP sobre exceso de 3 260 CUP', excess, '5 %', 'tcp', fraction=(5, 100))
-    if x.actor in ('mipyme', 'cna', 'pdl', 'estatal') and profit is not None:
+    elif personal is not None and 'tcp_personal_advance' not in obligations:
+        raise HTTPException(422, 'El vector revisado no habilita este anticipo personal')
+    if x.actor in ('mipyme', 'cna', 'pdl', 'estatal') and profit is not None and 'profit' in obligations:
         source = 'mipyme' if x.actor == 'mipyme' else 'pdl' if x.actor == 'pdl' else 'presupuesto'
         add('Impuesto sobre utilidades (base imponible revisada)', profit, '35 %', source, 'anual', (35, 100))
-    if x.actor == 'mipyme' and activity_income is not None:
+    elif profit is not None:
+        raise HTTPException(422, 'El vector revisado no habilita el concepto de utilidades')
+    if x.actor == 'mipyme' and activity_income is not None and 'territorial' in obligations:
         add('Contribución territorial MIPYME', activity_income, '1 %', 'mipyme', fraction=(1, 100))
+    elif activity_income is not None:
+        raise HTTPException(422, 'El vector revisado no habilita contribución territorial')
     if x.actor in ('mipyme', 'pdl') and payroll is not None:
         source = x.actor
-        add('Impuesto por utilización de fuerza de trabajo', payroll, '5 %', source, fraction=(5, 100))
-        add('Contribución a seguridad social: 12,5 % al fisco y 1,5 % provisionado', payroll, '14 %', source, fraction=(14, 100))
+        if 'workforce' in obligations:
+            add('Impuesto por utilización de fuerza de trabajo', payroll, '5 %', source, fraction=(5, 100))
+        if 'employer_social' in obligations:
+            add('Contribución a seguridad social: 12,5 % al fisco y 1,5 % provisionado', payroll, '14 %', source, fraction=(14, 100))
+        if not {'workforce', 'employer_social'} & obligations:
+            raise HTTPException(422, 'El vector revisado no habilita tributos de remuneraciones')
+    elif payroll is not None:
+        raise HTTPException(422, 'No se calcularon tributos de remuneraciones para este actor')
     return {
         'actor': x.actor, 'mes': x.month, 'situacion': x.situation, 'lineas': lines,
-        'advertencia': 'Simulación condicionada a bases y régimen revisados. No incluye todos los tributos, créditos, exenciones, retenciones, cuotas ni la declaración oficial de ONAT. La utilidad comercial no equivale por sí sola a base imponible.',
+        'advertencia': 'Simulación de conceptos clasificados a partir del vector cargado y revisado por el administrador. No interpreta automáticamente el documento ni sustituye a ONAT. Compruebe otros tributos, exenciones, retenciones, cuotas y pagos. La utilidad comercial no equivale a base imponible.',
     }
 
 
