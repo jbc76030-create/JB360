@@ -19,7 +19,7 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext(scripts[0],sandbox);
 const run = x => vm.runInContext(x,sandbox);
-const event = fields => ({preventDefault(){},target:{elements:Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,{value:String(v)}]))}});
+const event = fields => {const elements=Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,{value:String(v)}]));elements.namedItem=name=>elements[name];return {preventDefault(){},target:{elements}}};
 
 assert.equal(run('db.products.length'),0,'new business starts without sample products');
 assert.equal(run('db.sales.length'),0);
