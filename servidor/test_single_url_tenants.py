@@ -41,6 +41,8 @@ def test_single_url_isolates_accounts_licenses_documents_and_sales():
                 assert response.status_code == 200, response.text
             a = login('uno', 'Clave-cliente-uno-2026')
             b = login('dos', 'Clave-cliente-dos-2026')
+            summary = call('GET', '/api/root/tenants', root).json()['rows']
+            assert len(summary) == 2 and all(row['expired'] and row['users'] == 1 for row in summary)
             assert a != b
             assert call('POST', '/api/login', json={'tenant': 'dos', 'username': 'vendedor',
                        'password': 'Clave-cliente-uno-2026'}).status_code == 401
@@ -54,6 +56,8 @@ def test_single_url_isolates_accounts_licenses_documents_and_sales():
                         'reference': 'PAGO-UNO', 'payment_verified': True}).status_code == 200
             assert call('GET', '/api/license', a).json()['expired'] is False
             assert call('GET', '/api/license', b).json()['expired'] is True
+            status = {row['slug']: row for row in call('GET', '/api/root/tenants', root).json()['rows']}
+            assert status['uno']['expired'] is False and status['dos']['expired'] is True
             assert call('GET', '/api/products', b).status_code == 402
             assert call('POST', '/api/admin/renew', root, 'dos', json={'months': 6,
                         'reference': 'PAGO-DOS', 'payment_verified': True}).status_code == 200
@@ -69,6 +73,8 @@ def test_single_url_isolates_accounts_licenses_documents_and_sales():
                                        [('uno', a, '100.00'), ('dos', b, '250.00')]))
             assert ra.status_code == 200 and rb.status_code == 200
             assert ra.json()['id'] == rb.json()['id'] == 1  # Different databases.
+            status = {row['slug']: row for row in call('GET', '/api/root/tenants', root).json()['rows']}
+            assert status['uno']['tickets'] == status['dos']['tickets'] == 1
             period = '?start=2026-01-01&end=2026-12-31'
             assert call('GET', '/api/integrated-report' + period, a).json()['net_sales_cents'] == 10000
             assert call('GET', '/api/integrated-report' + period, b).json()['net_sales_cents'] == 25000
@@ -102,6 +108,16 @@ def test_single_url_isolates_accounts_licenses_documents_and_sales():
             assert call('POST', '/api/account/password', b, json={
                 'old_password': 'Nueva-clave-dos-2026', 'new_password': 'Otra-clave-dos-2026'}).status_code == 200
             assert call('GET', '/api/license', b).status_code == 401
+            b = login('dos', 'Otra-clave-dos-2026')
+            assert call('GET', '/api/license', b).status_code == 200
+            assert call('POST', f'/api/admin/users/{operator_id}/status', root, 'dos', json={
+                'admin_password': 'General-admin-password-2026', 'active': False}).status_code == 200
+            assert call('GET', '/api/license', b).status_code == 401
+            assert call('POST', '/api/login', json={'tenant': 'dos', 'username': 'vendedor',
+                       'password': 'Otra-clave-dos-2026'}).status_code == 403
+            assert call('GET', '/api/license', a).status_code == 200
+            assert call('POST', f'/api/admin/users/{operator_id}/status', root, 'dos', json={
+                'admin_password': 'General-admin-password-2026', 'active': True}).status_code == 200
             b = login('dos', 'Otra-clave-dos-2026')
             assert call('GET', '/api/license', b).status_code == 200
             assert call('POST', '/api/logout', root, 'uno').status_code == 200
