@@ -1,0 +1,157 @@
+{
+  "estado": "PARCIAL_VERIFICACION_PENDIENTE",
+  "fecha_corte": "2026-10-25",
+  "aviso": "Referencial; no exhaustivo. Fuente primaria: Gaceta 39 Extraordinaria 2016 y 78 Ordinaria 2019. Sin contabilizacion automatica.",
+  "fuentes": [
+    {
+      "norma": "Res. 494/2016 MFP",
+      "url": "https://www.gacetaoficial.gob.cu/sites/default/files/goc-2016-ex39.pdf"
+    },
+    {
+      "norma": "Res. 407/2019 MFP",
+      "url": "https://www.gacetaoficial.gob.cu/sites/default/files/goc-2019-o78.pdf"
+    },
+    {
+      "norma": "Res. 346/2021 MFP, GO 94/2021",
+      "url": "https://oncubanews.com/wp-content/uploads/2024/03/goc-2021-o94-1.pdf"
+    }
+  ],
+  "cuentas": [
+    {
+      "regimen": "tcp",
+      "codigo": "100",
+      "nombre": "Efectivo en Caja",
+      "naturaleza": "activo",
+      "uso_resumen": "Cobros en efectivo y pagos desde caja",
+      "fundamento": "Res. 346/2021, anexo 3"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "110",
+      "nombre": "Efectivo en Banco",
+      "naturaleza": "activo",
+      "uso_resumen": "Depósitos y pagos bancarios",
+      "fundamento": "Res. 346/2021, anexo 3"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "470",
+      "nombre": "Préstamos Bancarios a Corto Plazo",
+      "naturaleza": "pasivo",
+      "uso_resumen": "Obligaciones bancarias a corto plazo",
+      "fundamento": "Res. 346/2021, anexo 2"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "520",
+      "nombre": "Préstamos Bancarios a Largo Plazo",
+      "naturaleza": "pasivo",
+      "uso_resumen": "Obligaciones bancarias a largo plazo",
+      "fundamento": "Res. 346/2021, anexo 2"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "600",
+      "nombre": "Patrimonio del TCP",
+      "naturaleza": "patrimonio",
+      "uso_resumen": "Aportes y movimientos patrimoniales",
+      "fundamento": "Res. 346/2021, anexo 2"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "610",
+      "nombre": "Utilidad Retenida",
+      "naturaleza": "patrimonio",
+      "uso_resumen": "Utilidades acumuladas",
+      "fundamento": "Res. 346/2021, anexo 2"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "620",
+      "nombre": "Pérdida",
+      "naturaleza": "patrimonio",
+      "uso_resumen": "Pérdidas registradas",
+      "fundamento": "Res. 346/2021, anexo 2"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "800",
+      "nombre": "Gastos de Operación",
+      "naturaleza": "gasto",
+      "uso_resumen": "Gastos de operación según reglas del régimen",
+      "fundamento": "Res. 346/2021, anexo 2"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "810",
+      "nombre": "Impuestos y Tasas",
+      "naturaleza": "gasto",
+      "uso_resumen": "Impuestos y tasas según subcuentas aplicables",
+      "fundamento": "Res. 346/2021, anexo 2"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "820",
+      "nombre": "Gastos de Capital",
+      "naturaleza": "gasto",
+      "uso_resumen": "Erogaciones de capital conforme a normativa específica",
+      "fundamento": "Res. 346/2021, anexo 2"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "900",
+      "nombre": "Ventas cobradas",
+      "naturaleza": "ingreso",
+      "uso_resumen": "Ventas cobradas",
+      "fundamento": "Res. 346/2021, anexo 2"
+    },
+    {
+      "regimen": "tcp",
+      "codigo": "999",
+      "nombre": "Resultado",
+      "naturaleza": "resultado",
+      "uso_resumen": "Cuenta de cierre",
+      "fundamento": "Res. 346/2021, anexo 2"
+    },
+    {
+      "regimen": "empresarial",
+      "codigo": "350",
+      "nombre": "Cuentas por Cobrar con Sentencia Firme",
+      "naturaleza": "activo",
+      "uso_resumen": "Cuentas por cobrar con sentencia firme sin cobrar",
+      "fundamento": "Res. 407/2019, modificación Res. 494/2016"
+    },
+    {
+      "regimen": "empresarial",
+      "codigo": "576",
+      "nombre": "Efectos por Pagar en Litigio",
+      "naturaleza": "pasivo",
+      "uso_resumen": "Efectos por pagar en litigio",
+      "fundamento": "Res. 407/2019, modificación Res. 494/2016"
+    },
+    {
+      "regimen": "empresarial",
+      "codigo": "577",
+      "nombre": "Cuentas por Pagar en Litigio",
+      "naturaleza": "pasivo",
+      "uso_resumen": "Cuentas por pagar en litigio",
+      "fundamento": "Res. 407/2019, modificación Res. 494/2016"
+    },
+    {
+      "regimen": "empresarial",
+      "codigo": "578",
+      "nombre": "Efectos por Pagar Protestados",
+      "naturaleza": "pasivo",
+      "uso_resumen": "Efectos por pagar en proceso judicial",
+      "fundamento": "Res. 407/2019, modificación Res. 494/2016"
+    },
+    {
+      "regimen": "empresarial",
+      "codigo": "914",
+      "nombre": "Ventas de Bienes con Destino a la Exportación",
+      "naturaleza": "ingreso",
+      "uso_resumen": "Ventas de bienes destinados a exportación",
+      "fundamento": "Res. 407/2019, modificación Res. 494/2016"
+    }
+  ]
+}
