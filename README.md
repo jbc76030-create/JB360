@@ -20,4 +20,4 @@ Los cobros por transferencia o tarjeta son importes declarados en las ventas; no
 
 ## Verificación técnica
 
-El archivo es autónomo, sin librerías remotas. El motor se comprobó en Node con un DOM simulado, mediante una secuencia de producto + servicio, pago mixto, devolución parcial, ajuste de existencias, caja, cobros electrónicos, edición de catálogo, gastos, informes y respaldo. Ejecuta `node tests/smoke.cjs` en una copia de este repositorio para repetir la comprobación. Queda pendiente una prueba visual en dispositivos reales.
+El archivo es autónomo, sin librerías remotas. El motor se comprobó en Node con un DOM simulado, mediante una secuencia de producto + servicio, pago mixto, devolución parcial, ajuste de existencias, caja, cobros electrónicos, edición de catálogo, gastos, informes y respaldo. En la página publicada se repitió la venta con devolución, se comprobó la persistencia al recargar y se descargó y restauró un respaldo JSON en Chrome de escritorio. Ejecuta `node tests/smoke.cjs` en una copia de este repositorio para repetir la prueba del motor. Quedan pendientes pruebas físicas en Android y tabletas y pruebas de impresión en esos equipos.
