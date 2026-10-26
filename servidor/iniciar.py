@@ -15,5 +15,8 @@ if not os.environ.get('JB360_ADMIN_PASSWORD'):
     if len(password) < 14:
         raise SystemExit('Se requieren al menos 14 caracteres.')
     os.environ['JB360_ADMIN_PASSWORD'] = password
-print('Abra http://127.0.0.1:8000/ en este equipo. Pulse Ctrl+C para cerrar.')
-uvicorn.run('server:app', host='127.0.0.1', port=8000)
+port = int(os.environ.get('JB360_PORT', '8000'))
+if not 1 <= port <= 65535:
+    raise SystemExit('Puerto inválido.')
+print(f'Abra http://127.0.0.1:{port}/ en este equipo. Pulse Ctrl+C para cerrar.')
+uvicorn.run('server:app', host='127.0.0.1', port=port)
