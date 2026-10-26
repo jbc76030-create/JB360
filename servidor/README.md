@@ -33,10 +33,14 @@ La app **no cobra, verifica transferencias ni emite un comprobante fiscal del pa
 ## Vector fiscal por negocio
 
 1. El cliente u operador carga en **Tributos** el PDF, PNG o JPEG del vector fiscal aprobado, su NIT y fecha de aprobación. Tamaño máximo 5 MiB. La base guarda el original y su huella SHA-256; la descarga comprueba la integridad.
-2. Si el administrador ya configuró el emisor, actor y NIT deben coincidir. El administrador coteja el documento real y registra los conceptos, la situación y fechas de vigencia. La carga de un vector nuevo deja el cálculo pendiente hasta que se revise de nuevo.
+2. Si el administrador ya configuró el emisor, actor y NIT deben coincidir. El administrador coteja el documento real y registra los conceptos, la situación y fechas de vigencia. La carga nueva queda pendiente sin sustituir al último vector revisado; el cálculo anterior conserva su vigencia hasta que el administrador active la nueva revisión.
 3. La simulación solo admite el actor, situación, mes completo y conceptos de la revisión vigente. El operador revisa las bases propuestas y las condiciones particulares antes de obtener importes. El archivo **no se interpreta automáticamente** y esta clasificación administrativa no es una aprobación de ONAT.
 
-Cada instalación tiene una base para **un negocio/contribuyente**. Si el administrador atiende varios actores económicos independientes, debe desplegar una instancia separada por cada uno, con su vector y sus usuarios. No mezcle empresas distintas en la misma base.
+Cada instalación tiene una base para **un negocio/contribuyente**. Si el administrador atiende varios actores económicos independientes, debe desplegar una instancia separada por cada uno, con su vector y sus usuarios. Puede usar `JB360_PORT` y `JB360_DB` distintos para iniciar dos instalaciones en un equipo; el acceso público requiere rutas o subdominios HTTPS separados. No mezcle empresas distintas en la misma base. `test_multiclient.py` comprueba con dos procesos que licencia, sesión, vector y ventas no se comparten.
+
+## Plan y normatador de cuentas
+
+La sección Administración custodia el PDF del normatador identificado por norma, tamaño máximo 5 MiB, con huella SHA-256 y descarga íntegra. Acepta además dos archivos JSON estructurados: el plan propio (`regimen`, `version`, `cuentas` con `codigo`, `nombre`, `naturaleza`, `uso`, `fuente`) y un lote normativo (`version`, `cuentas` con `codigo`, `nombre`, `naturaleza`, `uso_contenido`, `norma`, `anexo`, `pagina`, `regimen`). La API valida la estructura y deja todo **pendiente de cotejo**. El catálogo referencial TCP antiguo basado en la Resolución 346/2021 fue retirado porque esa norma quedó derogada por la 272/2024. La app no genera asientos usando transcripciones no aprobadas ni promete un nomenclador consolidado completo. El puente VERSAT permanece como precontabilización para revisión.
 
 ## Seguridad y respaldos
 
@@ -48,7 +52,9 @@ El alojamiento debe terminar TLS/HTTPS, proteger los respaldos, actualizar depen
 
 Lee [NORMAS_FISCALES_2026.md](NORMAS_FISCALES_2026.md). La app propone importes operativos del mes y solo calcula conceptos acotados después de revisar las bases y el régimen. No genera una DJ oficial ni cubre excepciones individuales. No llames “aprobado” a un cálculo por haber pasado una prueba de software.
 
-Pruebas de API: `python -m pytest -q`. Ocho escenarios automatizados incluyen 30 ventas concurrentes, stock, reversión, servicio, pagos mixtos, terceros, roles, vencimiento/renovación, informes con separación de bienes y servicios, cambio de día local de Cuba, vector y respaldo, límite de acceso, CSV de precontabilización y ejemplos fiscales. No equivalen a un ensayo de producción con equipos, impresoras, estados bancarios, vector fiscal real y contador de cada cliente.
+Los [modelos originales ONAT localizados](MODELOS_ONAT.md) se enlazan sin modificar; la app aún no rellena ni presenta sus declaraciones.
+
+Pruebas de API: `python -m pytest -q`. Diez escenarios automatizados incluyen 30 ventas concurrentes, stock, reversión, servicio, pagos mixtos, terceros, roles, licencias de dos negocios aislados, informes con separación de bienes y servicios, cambio de día local de Cuba, vector y respaldo, límite de acceso, enlaces de botones, CSV de precontabilización y ejemplos fiscales. No equivalen a un ensayo de producción con equipos, impresoras, estados bancarios, vector fiscal real y contador de cada cliente.
 
 ## Alcance que aún impide explotación pública como sistema completo
 
