@@ -7,7 +7,7 @@ Aplicación de gestión comercial para registrar productos, servicios, ventas, d
 Abre `index.html` en un navegador moderno. Para usarlo desde GitHub Pages, activa **Settings → Pages → Build and deployment → GitHub Actions** en este repositorio. La publicación existente en `.github/workflows/pages.yml` se ejecuta al actualizar `main` o manualmente desde Actions. También puedes descargar `index.html` y abrirlo localmente sin conexión; algunos navegadores limitan el almacenamiento de archivos `file://`, así que comprueba que tus registros sigan allí después de cerrar y volver a abrir, y conserva un respaldo JSON.
 
 1. En **Perfil económico**, selecciona el actor y guarda los datos del negocio.
-2. En **Productos** y **Servicios**, crea el catálogo. La instalación nueva empieza vacía.
+2. En **Productos** y **Servicios**, crea y actualiza el catálogo. La instalación nueva empieza vacía. Las existencias se cambian con movimientos de inventario y las ventas anteriores conservan sus importes originales.
 3. En **Ventas**, añade artículos al comprobante y registra el cobro en efectivo, transferencia, tarjeta o una combinación. Las devoluciones parciales reponen existencias y distribuyen el reembolso entre los medios originales.
 4. Consulta **Caja y Banco**, **Informes** y el libro auxiliar **Tributos**.
 5. En **Respaldo**, descarga periódicamente el JSON. Contiene los datos comerciales y el perfil económico. Para cambiar de equipo, importa ese archivo en el otro navegador; la importación reemplaza sus datos comerciales.
@@ -18,4 +18,4 @@ Los cobros por transferencia o tarjeta son importes declarados en las ventas; no
 
 ## Verificación técnica
 
-El archivo es autónomo, sin librerías remotas. El motor se comprobó en Node con un DOM simulado, mediante una secuencia de producto + servicio, pago mixto, devolución parcial, ajuste de existencias, caja, cobros electrónicos, gastos, informes y respaldo. Ejecuta `node tests/smoke.cjs` en una copia de este repositorio para repetir la comprobación. Queda pendiente una prueba visual en dispositivos reales.
+El archivo es autónomo, sin librerías remotas. El motor se comprobó en Node con un DOM simulado, mediante una secuencia de producto + servicio, pago mixto, devolución parcial, ajuste de existencias, caja, cobros electrónicos, edición de catálogo, gastos, informes y respaldo. Ejecuta `node tests/smoke.cjs` en una copia de este repositorio para repetir la comprobación. Queda pendiente una prueba visual en dispositivos reales.
