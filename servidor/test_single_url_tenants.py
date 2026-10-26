@@ -86,6 +86,24 @@ def test_single_url_isolates_accounts_licenses_documents_and_sales():
                         json={'password': 'General-admin-password-2026'}).status_code == 200
             assert call('POST', '/api/admin/backup', root, 'uno',
                         json={'password': 'Clave-cliente-uno-2026'}).status_code == 403
+            operators = call('GET', '/api/admin/users', root, 'dos').json()['rows']
+            operator_id = next(row['id'] for row in operators if row['username'] == 'vendedor')
+            assert call('POST', f'/api/admin/users/{operator_id}/password', a,
+                        json={'admin_password': 'Clave-cliente-uno-2026',
+                              'new_password': 'Nueva-clave-dos-2026'}).status_code == 403
+            assert call('POST', f'/api/admin/users/{operator_id}/password', root, 'dos',
+                        json={'admin_password': 'General-admin-password-2026',
+                              'new_password': 'Nueva-clave-dos-2026'}).status_code == 200
+            assert call('GET', '/api/license', b).status_code == 401
+            b = login('dos', 'Nueva-clave-dos-2026')
+            assert call('GET', '/api/integrated-report' + period, b).json()['net_sales_cents'] == 25000
+            assert call('POST', '/api/account/password', b, json={
+                'old_password': 'incorrecta', 'new_password': 'Otra-clave-dos-2026'}).status_code == 403
+            assert call('POST', '/api/account/password', b, json={
+                'old_password': 'Nueva-clave-dos-2026', 'new_password': 'Otra-clave-dos-2026'}).status_code == 200
+            assert call('GET', '/api/license', b).status_code == 401
+            b = login('dos', 'Otra-clave-dos-2026')
+            assert call('GET', '/api/license', b).status_code == 200
             assert call('POST', '/api/logout', root, 'uno').status_code == 200
             assert call('GET', '/api/root/tenants', root).status_code == 401
             assert call('GET', '/api/license', a).status_code == 200
