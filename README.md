@@ -8,6 +8,10 @@ Abre **[JB360 en el navegador](https://jbc76030-create.github.io/Web/jb360/)**. 
 
 También puedes descargar `index.html` y abrirlo localmente sin conexión; algunos navegadores limitan el almacenamiento de archivos `file://`, así que comprueba que tus registros sigan allí después de cerrar y volver a abrir, y conserva un respaldo JSON.
 
+### Administración, usuarios y vectores fiscales
+
+La [versión de servidor en revisión](https://github.com/jbc76030-create/JB360/tree/servidor-2026-en-revision/servidor) ofrece cuentas de administrador y operador, licencia semestral controlada en el servidor, carga del vector fiscal aprobado por contribuyente, revisión administrativa de sus conceptos y simulación tributaria condicionada. [Descargar esa rama](https://github.com/jbc76030-create/JB360/archive/refs/heads/servidor-2026-en-revision.zip). Se instala por negocio y aún no está alojada en una dirección pública con HTTPS. El enlace de GitHub Pages de arriba es la versión comercial local del navegador, sin esas cuentas compartidas ni el archivo del vector.
+
 1. En **Perfil económico**, selecciona el actor y guarda los datos del negocio.
 2. En **Productos** y **Servicios**, crea y actualiza el catálogo. La instalación nueva empieza vacía. Las existencias se cambian con movimientos de inventario y las ventas anteriores conservan sus importes originales.
 3. En **Ventas**, añade artículos al comprobante y registra el cobro en efectivo, transferencia, tarjeta o una combinación. Las devoluciones parciales reponen existencias y distribuyen el reembolso entre los medios originales.
