@@ -1,0 +1,49 @@
+{
+  "corte": "2026-10-26",
+  "estado": "FUENTES_OFICIALES_LOCALIZADAS_CONSOLIDACION_PENDIENTE",
+  "advertencia": "Fuente oficial 494/2016 de 64 paginas y 407/2019 de 17 paginas localizada. Falta cotejo completo de modificaciones y vigencia. Prohibida activacion automatica.",
+  "instrumentos": [
+    {
+      "id": "MFP-235-2005",
+      "tipo": "marco",
+      "titulo": "Normas Cubanas de Información Financiera",
+      "regimen": [
+        "empresarial",
+        "tcp_sujeto_a_regimen_propio"
+      ],
+      "estado_verificacion": "identificada_no_consolidada",
+      "url": "https://www.gacetaoficial.gob.cu/es/resolucion-235-de-2005-de-ministerio-de-finanzas-y-precios"
+    },
+    {
+      "id": "MFP-494-2016",
+      "tipo": "base_nomenclador",
+      "titulo": "Nomenclador y uso y contenido de cuentas, anexos 1 y 2",
+      "regimen": [
+        "empresarial",
+        "cooperativo_en_ambito"
+      ],
+      "estado_verificacion": "texto_oficial_anexos_1_y_2_localizados_cotejo_parcial",
+      "url": "https://www.gacetaoficial.gob.cu/sites/default/files/goc-2016-ex39.pdf"
+    },
+    {
+      "id": "MFP-407-2019",
+      "tipo": "modificacion",
+      "modifica": "MFP-494-2016",
+      "titulo": "Modificaciones al nomenclador y uso y contenido",
+      "regimen": [
+        "empresarial",
+        "cooperativo_en_ambito"
+      ],
+      "estado_verificacion": "texto_oficial_localizado_cotejo_pendiente",
+      "url": "https://www.gacetaoficial.gob.cu/sites/default/files/goc-2019-o78.pdf"
+    },
+    {
+      "id": "MFP-272-2024",
+      "tipo": "regimen_especial",
+      "titulo": "Contabilidad de las operaciones de trabajadores por cuenta propia según ingresos anuales",
+      "regimen": ["tcp"],
+      "estado_verificacion": "identificada_no_consolidada",
+      "url": "https://www.gacetaoficial.gob.cu/es/resolucion-272-de-2024-de-ministerio-de-finanzas-y-precios"
+    }
+  ]
+}
