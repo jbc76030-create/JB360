@@ -2,6 +2,8 @@
 
 Este paquete ofrece **una misma dirección de acceso para varios negocios**. Cada negocio tiene una base SQLite separada, sus usuarios y su licencia semestral. El administrador general registra negocios, controla las cuentas operadoras y confirma las renovaciones. Incluye productos, inventario, ventas de bienes, servicios, pagos mixtos, reversión íntegra de tickets, otros ingresos y gastos, terceros, documentos comerciales borrador, informes y simulación fiscal condicionada de 2026.
 
+Para vender acceso a varios clientes desde Android, ordenador y tableta, utiliza [OPERACION_EN_INTERNET.md](OPERACION_EN_INTERNET.md). Incluye `Dockerfile`, `compose.yaml`, `Caddyfile`, creación privada de la clave general y copia integral de todas las bases. Requiere tu servidor y dominio; este paquete aún no está desplegado en una URL pública.
+
 ## Instalación local para evaluación
 
 Para instalar una copia por cliente y acceder desde otros dispositivos, sigue [INSTALACION_POR_CLIENTE.md](INSTALACION_POR_CLIENTE.md). Incluye lanzadores de Windows y macOS/Linux. La app funciona como servidor web local; teléfono y tableta acceden mediante navegador cuando el servidor esté disponible por una red segura. No contiene una app nativa autónoma para Android/iOS.
@@ -25,7 +27,7 @@ La dirección local `http://127.0.0.1:8000/` es la interfaz de todos los negocio
 1. Entra como `admin` general con código de cliente vacío y la contraseña configurada en el servidor. En **Negocios independientes**, crea un código, un nombre, un usuario inicial y su contraseña. El negocio comienza con licencia pendiente.
 2. Selecciona ese negocio en la misma pantalla. Ya puedes crear usuarios adicionales para él. Facilita a cada usuario la dirección compartida, el código de su negocio y sus credenciales propias.
 3. Tras comprobar el pago por un procedimiento externo, registra la referencia y marca la confirmación en Administración del negocio seleccionado. El servidor añade exactamente seis meses desde el vencimiento vigente o desde el día de la activación si ya venció.
-4. El operador puede consultar la fecha de licencia cuando venza, pero el servidor bloquea sus operaciones hasta la renovación. Solo el administrador puede renovarla; queda una bitácora de referencias y fechas.
+4. El operador puede consultar la fecha de licencia cuando venza, pero el servidor bloquea sus operaciones hasta la renovación. Solo el administrador puede renovarla; queda una bitácora de referencias y fechas. El panel general resume vencimientos y cantidad de usuarios/ventas por negocio; también permite suspender o habilitar operadores.
 
 La app **no cobra, verifica transferencias ni emite un comprobante fiscal del pago de licencia**. La confirmación del administrador es una declaración manual. La misma referencia de cobro no activa dos veces. El código público y una instalación que el cliente controle no constituyen una protección antipiratería; para licencias exigibles, conserva el servidor y sus credenciales bajo control del administrador.
 
@@ -53,7 +55,7 @@ Lee [NORMAS_FISCALES_2026.md](NORMAS_FISCALES_2026.md). La app propone importes 
 
 Los [modelos originales ONAT localizados](MODELOS_ONAT.md) se enlazan sin modificar; la app aún no rellena ni presenta sus declaraciones.
 
-Pruebas de API: `python -m pytest -q`. Doce escenarios automatizados incluyen instalación y reinicio local sin repetir el secreto de arranque, dos negocios simultáneos en una URL, 30 ventas concurrentes, stock, reversión, servicio, pagos mixtos, terceros, roles, licencias aisladas, informes, cambio de día local de Cuba, vector y respaldo, límite de acceso, enlaces de botones, CSV de precontabilización y ejemplos fiscales. No equivalen a un ensayo de producción con equipos, impresoras, estados bancarios, vector fiscal real y contador de cada cliente.
+Pruebas de API: `python -m pytest -q`. Catorce escenarios automatizados incluyen creación inicial de la clave general, instalación y reinicio local, dos negocios simultáneos en una URL, respaldo integral de las bases, 30 ventas concurrentes, stock, reversión, servicio, pagos mixtos, terceros, roles, licencias aisladas, informes, cambio de día local de Cuba, vector y respaldo, límite de acceso, enlaces de botones, CSV de precontabilización y ejemplos fiscales. No equivalen a un ensayo de producción con equipos, impresoras, estados bancarios, vector fiscal real y contador de cada cliente.
 
 Consulta [PRUEBAS_Y_ALCANCE.md](PRUEBAS_Y_ALCANCE.md) para ver cada ejemplo, su resultado y los puntos aún sin comprobar.
 
