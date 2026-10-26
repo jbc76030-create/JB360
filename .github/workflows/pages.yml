@@ -1,30 +1,15 @@
-name: Publicar JB360 en GitHub Pages
+name: Verificar JB360 comercial
 on:
   push:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
-  pages: write
-  id-token: write
-concurrency:
-  group: pages
-  cancel-in-progress: true
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  comprobar:
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar codigo
+      - name: Descargar código
         uses: actions/checkout@v4
-      - name: Habilitar y configurar Pages
-        uses: actions/configure-pages@v5
-      - name: Preparar archivos estaticos
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-      - name: Publicar sitio
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Comprobar operaciones comerciales
+        run: node tests/smoke.cjs
