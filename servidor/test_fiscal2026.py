@@ -1,4 +1,5 @@
 import datetime
+import base64
 import importlib
 import os
 import sys
@@ -12,7 +13,7 @@ def test_actor_examples_and_license():
         os.environ['JB360_DB'] = tmp + '/test.sqlite3'
         os.environ['JB360_ADMIN_PASSWORD'] = 'Strong-admin-password-2026'
         sys.path.insert(0, os.path.dirname(__file__))
-        for name in ('fiscal2026', 'versat_bridge', 'normativa_control', 'catalogo_api', 'commercial', 'extension', 'server'):
+        for name in ('vector_fiscal', 'fiscal2026', 'versat_bridge', 'normativa_control', 'catalogo_api', 'commercial', 'extension', 'server'):
             sys.modules.pop(name, None)
         server = importlib.import_module('server')
         with TestClient(server.app) as c:
@@ -22,6 +23,20 @@ def test_actor_examples_and_license():
                 return {'Authorization': 'Bearer ' + r.json()['token']}
 
             admin = login('admin', 'Strong-admin-password-2026')
+            def vector(actor, situation, obligations):
+                doc = base64.b64encode(b'%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\n%%EOF').decode()
+                uploaded = c.post('/api/fiscal/vector', headers=user, json={
+                    'actor': actor, 'nit': '12345678901', 'approved_on': '2026-01-01',
+                    'filename': 'ONAT_vector.pdf', 'file_b64': doc,
+                })
+                assert uploaded.status_code == 200, uploaded.text
+                assert c.get('/api/fiscal/vector', headers=user).json()['vector']['status'] == 'pending'
+                reviewed = c.post('/api/admin/fiscal/vector/review', headers=admin, json={
+                    'vector_id': uploaded.json()['id'], 'situation': situation,
+                    'obligations': obligations, 'valid_from': '2026-01-01',
+                    'valid_to': '2026-12-31', 'review_note': 'Cotejado manualmente para el escenario de prueba',
+                })
+                assert reviewed.status_code == 200, reviewed.text
             assert c.post('/api/users', headers=admin, json={'username': 'owner2', 'password': 'Strong-password-2026', 'role': 'admin'}).status_code == 422
             assert c.post('/api/users', headers=admin, json={'username': 'cliente', 'password': 'Strong-password-2026', 'role': 'operator'}).status_code == 200
             user = login('cliente', 'Strong-password-2026')
@@ -33,6 +48,8 @@ def test_actor_examples_and_license():
                         exceptions_reviewed=True, bases_reviewed=True)
             assert c.post('/api/fiscal/simulate', headers=user, json=base).status_code == 402
             assert c.post('/api/admin/renew', headers=admin, json={'months': 6, 'reference': 'COBRO-001', 'payment_verified': True}).status_code == 200
+            assert c.post('/api/fiscal/simulate', headers=user, json=base).status_code == 409
+            vector('mipyme', 'standard', ['sales_services', 'profit', 'territorial', 'workforce', 'employer_social'])
             assert c.post('/api/fiscal/simulate', headers=user, json={**base, 'exceptions_reviewed': False}).status_code == 422
             assert c.post('/api/fiscal/simulate', headers=user, json={**base, 'actor': 'autonomo'}).status_code == 422
             assert c.post('/api/fiscal/simulate', headers=user, json={**base, 'services_base': '-1'}).status_code == 422
@@ -46,15 +63,19 @@ def test_actor_examples_and_license():
             assert lines['Contribución a seguridad social: 12,5 % al fisco y 1,5 % provisionado'] == 1400
             tcp = {**base, 'actor': 'tcp', 'personal_income_base': '5000.00', 'taxable_profit': None,
                    'payroll_base': None, 'total_activity_income_base': None}
+            vector('tcp', 'standard', ['sales_services', 'tcp_personal_advance'])
             rows = c.post('/api/fiscal/simulate', headers=user, json=tcp).json()['lineas']
             assert [x['estimado_cents'] for x in rows] == [15000, 8700]
             pdl = {**base, 'actor': 'pdl', 'month': '2026-11', 'situation': 'pdl_minindustry_food', 'total_activity_income_base': None}
             assert c.post('/api/fiscal/simulate', headers=user, json={**pdl, 'month': '2026-10'}).status_code == 422
+            vector('pdl', 'pdl_minindustry_food', ['sales_services', 'profit', 'workforce', 'employer_social'])
             rows = c.post('/api/fiscal/simulate', headers=user, json=pdl).json()['lineas']
             assert [x['estimado_cents'] for x in rows] == [5000, 5000, 7000, 500, 1400]
             cna = {**base, 'actor': 'cna', 'payroll_base': None, 'total_activity_income_base': None}
+            vector('cna', 'standard', ['sales_services', 'profit'])
             assert [x['estimado_cents'] for x in c.post('/api/fiscal/simulate', headers=user, json=cna).json()['lineas']] == [15000, 7000]
             estatal = {**cna, 'actor': 'estatal', 'situation': 'state_retail_to_population'}
+            vector('estatal', 'state_retail_to_population', ['sales_services', 'profit'])
             assert [x['estimado_cents'] for x in c.post('/api/fiscal/simulate', headers=user, json=estatal).json()['lineas']] == [15000, 7000]
             assert c.post('/api/fiscal/simulate', headers=user, json={**estatal, 'situation': 'standard'}).status_code == 422
             # The proposed base distinguishes a service from a good and follows a reversal.
