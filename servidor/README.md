@@ -17,6 +17,10 @@ mkdir -p datos
 
 En Windows PowerShell, desde esta carpeta: `py -m venv .venv`, luego `./.venv/Scripts/python.exe -m pip install -r requirements.txt` y `./.venv/Scripts/python.exe iniciar.py`. El iniciador solicita la contraseña del administrador sin mostrarla y crea `datos/jb360.sqlite3`. Si configura las variables de entorno antes, las respeta. Abre `http://127.0.0.1:8000/` en el equipo servidor. La app cliente utiliza la misma dirección con su usuario operador; la sección Administración solo aparece al administrador. **No expongas este servidor de desarrollo directamente a Internet.** Para acceso desde otros equipos se requiere alojamiento permanente, HTTPS, protección de la base y copias de seguridad.
 
+## Acceso de administrador y clientes
+
+La dirección local `http://127.0.0.1:8000/` es la interfaz de ambos roles en el equipo que ejecuta el servidor. Para que personas en otros equipos entren simultáneamente por **un mismo enlace público**, el administrador debe alojar esta instancia en un servidor permanente, con HTTPS y un dominio propio. El iniciador local escucha solo en `127.0.0.1` deliberadamente. GitHub Pages puede publicar los archivos estáticos, pero no ejecuta este servidor ni comparte la base SQLite.
+
 ## Activación de clientes
 
 1. La base nueva empieza con licencia pendiente. Entra como `admin` con la contraseña configurada en el servidor.
@@ -24,13 +28,27 @@ En Windows PowerShell, desde esta carpeta: `py -m venv .venv`, luego `./.venv/Sc
 3. Tras comprobar el pago por un procedimiento externo, registra la referencia y marca la confirmación en Administración. El servidor añade exactamente seis meses desde el vencimiento vigente o desde el día de la activación si ya venció.
 4. El operador puede consultar la fecha de licencia cuando venza, pero el servidor bloquea sus operaciones hasta la renovación. Solo el administrador puede renovarla; queda una bitácora de referencias y fechas.
 
-La app **no cobra, verifica transferencias ni emite un comprobante fiscal del pago de licencia**. La confirmación del administrador es una declaración manual. El código público y una instalación que el cliente controle no constituyen una protección antipiratería; para licencias exigibles, conserva el servidor y sus credenciales bajo control del administrador.
+La app **no cobra, verifica transferencias ni emite un comprobante fiscal del pago de licencia**. La confirmación del administrador es una declaración manual. La misma referencia de cobro no activa dos veces. El código público y una instalación que el cliente controle no constituyen una protección antipiratería; para licencias exigibles, conserva el servidor y sus credenciales bajo control del administrador.
+
+## Vector fiscal por negocio
+
+1. El cliente u operador carga en **Tributos** el PDF, PNG o JPEG del vector fiscal aprobado, su NIT y fecha de aprobación. Tamaño máximo 5 MiB. La base guarda el original y su huella SHA-256; la descarga comprueba la integridad.
+2. Si el administrador ya configuró el emisor, actor y NIT deben coincidir. El administrador coteja el documento real y registra los conceptos, la situación y fechas de vigencia. La carga de un vector nuevo deja el cálculo pendiente hasta que se revise de nuevo.
+3. La simulación solo admite el actor, situación, mes completo y conceptos de la revisión vigente. El operador revisa las bases propuestas y las condiciones particulares antes de obtener importes. El archivo **no se interpreta automáticamente** y esta clasificación administrativa no es una aprobación de ONAT.
+
+Cada instalación tiene una base para **un negocio/contribuyente**. Si el administrador atiende varios actores económicos independientes, debe desplegar una instancia separada por cada uno, con su vector y sus usuarios. No mezcle empresas distintas en la misma base.
+
+## Seguridad y respaldos
+
+La API exige sesión para operaciones, limita cinco intentos fallidos de acceso por usuario e IP en quince minutos, caduca sesiones a las doce horas y registra acciones sensibles. Solo el administrador renueva, revisa vectores o descarga una copia de la base; para el respaldo debe repetir su contraseña. El respaldo SQLite se genera con la API transaccional de SQLite, comprueba su integridad e incluye el vector fiscal, pero elimina las sesiones activas. La descarga debe guardarse fuera del servidor en un lugar privado; para restaurarla, detenga el proceso y reemplace la base tras conservar la anterior.
+
+El alojamiento debe terminar TLS/HTTPS, proteger los respaldos, actualizar dependencias y limitar el acceso a la base. Configure `JB360_ALLOWED_HOSTS` con el dominio real (lista separada por comas); por defecto se aceptan solo `localhost`, `127.0.0.1` y `testserver` para pruebas. No publique directamente Uvicorn ni convierta `iniciar.py` en un servidor abierto. Estas medidas reducen riesgos conocidos, pero ninguna aplicación puede prometer ausencia total de intrusiones o errores.
 
 ## Tributación y validación
 
 Lee [NORMAS_FISCALES_2026.md](NORMAS_FISCALES_2026.md). La app propone importes operativos del mes y solo calcula conceptos acotados después de revisar las bases y el régimen. No genera una DJ oficial ni cubre excepciones individuales. No llames “aprobado” a un cálculo por haber pasado una prueba de software.
 
-Pruebas de API: `python -m pytest -q`. Siete escenarios automatizados incluyen 30 ventas concurrentes, stock, reversión, servicio, pagos mixtos, terceros, roles, vencimiento/renovación, informes con separación de bienes y servicios, cambio de día local de Cuba, CSV de precontabilización y ejemplos fiscales. No equivalen a un ensayo de producción con equipos, impresoras, estados bancarios, vector fiscal y contador de cada cliente.
+Pruebas de API: `python -m pytest -q`. Ocho escenarios automatizados incluyen 30 ventas concurrentes, stock, reversión, servicio, pagos mixtos, terceros, roles, vencimiento/renovación, informes con separación de bienes y servicios, cambio de día local de Cuba, vector y respaldo, límite de acceso, CSV de precontabilización y ejemplos fiscales. No equivalen a un ensayo de producción con equipos, impresoras, estados bancarios, vector fiscal real y contador de cada cliente.
 
 ## Alcance que aún impide explotación pública como sistema completo
 
