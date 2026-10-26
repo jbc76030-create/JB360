@@ -4,7 +4,7 @@ Aplicación de gestión comercial para registrar productos, servicios, ventas, d
 
 ## Empezar
 
-Abre `index.html` en un navegador moderno. Para usarlo desde GitHub Pages, activa **Settings → Pages → Build and deployment → GitHub Actions** en este repositorio. La publicación existente en `.github/workflows/pages.yml` se ejecuta al actualizar `main`. También puedes descargar `index.html` y abrirlo localmente sin conexión.
+Abre `index.html` en un navegador moderno. Para usarlo desde GitHub Pages, activa **Settings → Pages → Build and deployment → GitHub Actions** en este repositorio. La publicación existente en `.github/workflows/pages.yml` se ejecuta al actualizar `main` o manualmente desde Actions. También puedes descargar `index.html` y abrirlo localmente sin conexión; algunos navegadores limitan el almacenamiento de archivos `file://`, así que comprueba que tus registros sigan allí después de cerrar y volver a abrir, y conserva un respaldo JSON.
 
 1. En **Perfil económico**, selecciona el actor y guarda los datos del negocio.
 2. En **Productos** y **Servicios**, crea el catálogo. La instalación nueva empieza vacía.
@@ -18,4 +18,4 @@ Los cobros por transferencia o tarjeta son importes declarados en las ventas; no
 
 ## Verificación técnica
 
-El archivo es autónomo, sin librerías remotas. El motor se comprobó con una secuencia de producto + servicio, pago mixto, devolución parcial, ajuste de existencias, caja, cobros electrónicos, gastos, informes y respaldo. Ejecuta `node tests/smoke.cjs` en una copia de este repositorio para repetir la comprobación.
+El archivo es autónomo, sin librerías remotas. El motor se comprobó en Node con un DOM simulado, mediante una secuencia de producto + servicio, pago mixto, devolución parcial, ajuste de existencias, caja, cobros electrónicos, gastos, informes y respaldo. Ejecuta `node tests/smoke.cjs` en una copia de este repositorio para repetir la comprobación. Queda pendiente una prueba visual en dispositivos reales.
