@@ -63,7 +63,16 @@ def test_vector_access_integrity_and_login_limit():
             assert client.post('/api/admin/fiscal/vector/review', headers=admin, json=review).status_code == 409
             second = client.post('/api/fiscal/vector', headers=user, json=payload)
             assert second.status_code == 200
-            assert client.get('/api/fiscal/vector', headers=user).json()['vector']['status'] == 'pending'
+            vector_state = client.get('/api/fiscal/vector', headers=user).json()
+            assert vector_state['vector']['status'] == 'pending'
+            assert vector_state['active_vector']['id'] == vid
+            previous_rule = client.post('/api/fiscal/simulate', headers=user, json={
+                'actor': 'mipyme', 'month': '2026-10', 'situation': 'standard',
+                'goods_base': '100.00', 'services_base': '0',
+                'bases_reviewed': True, 'exceptions_reviewed': True,
+            })
+            assert previous_rule.status_code == 200
+            assert previous_rule.json()['lineas'][0]['estimado_cents'] == 1000
             with server.conn() as db:
                 db.execute('UPDATE fiscal_vectors SET content=? WHERE id=?', (b'tampered', second.json()['id']))
             assert client.get('/api/fiscal/vector/download', headers=user).status_code == 409
