@@ -1,0 +1,7 @@
+# Modelos ONAT: originales y alcance de JB360
+
+Consulta realizada el 26 de octubre de 2026. El [portal oficial de declaraciones juradas de la ONAT](https://djutilidades.onat.gob.cu/) enlaza el [DJ-01 Excel publicado en 2026](https://djutilidades.onat.gob.cu/wp-content/uploads/2026/02/DJ-01-Excel-2026-Impuesto-sobre-Utilidades_vf.xlsx) y su [instructivo Word](https://djutilidades.onat.gob.cu/wp-content/uploads/2026/02/Instructivo-DJ-01-Utilidades-2026.docx). Se ofrecen los originales por enlace directo, sin remaquetación ni modificación. Antes de usarlos, confirme en la ONAT el ejercicio y el modelo exigible al contribuyente.
+
+La simulación interna de JB360 no rellena esas planillas, no las firma digitalmente y no presenta declaraciones. No se ha verificado celda por celda el original ni su instructivo dentro de este proyecto. Otros modelos para TCP, socios, CNA y situaciones sectoriales tampoco están incorporados ni se generan automáticamente: sus campos, fórmulas y vigencia deben cotejarse en fuentes oficiales antes de habilitarlos. Una utilidad comercial o un cálculo de tasa aislada no proporciona los datos necesarios para una DJ completa.
+
+El [sitio de la Gaceta Oficial](https://www.gacetaoficial.gob.cu/) documenta las normas; el modelo vigente y la presentación corresponden a los canales de ONAT. El vector fiscal de cada contribuyente determina qué obligaciones deben revisarse, pero no reemplaza los libros, ajustes, pagos a cuenta, saldos, exenciones y justificantes exigidos por cada declaración.
