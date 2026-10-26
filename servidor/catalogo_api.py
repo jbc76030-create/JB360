@@ -22,13 +22,16 @@ setup()
 def catalogo(regimen:str='empresarial',authorization:str|None=Header(None)):
     require(authorization)
     if regimen not in ('tcp','empresarial'):raise HTTPException(422,'Régimen no disponible')
-    return {**{k:v for k,v in CATALOG.items() if k!='cuentas'},'regimen':regimen,'cuentas':[a for a in CATALOG['cuentas'] if a['regimen']==regimen]}
+    return {**{k:v for k,v in CATALOG.items() if k!='cuentas'},'regimen':regimen,'cuentas':[a for a in CATALOG['cuentas'] if a['regimen']==regimen],
+            'advertencia':'No se ofrece nomenclador TCP consolidado y vigente para asientos' if regimen=='tcp' else 'Extracto parcial para cotejo, no plan de cuentas completo'}
 @app.post('/api/admin/contabilidad/plan')
 def cargar_plan(x:OwnPlan,authorization:str|None=Header(None)):
     u=admin(authorization)
     codigos=[a.codigo for a in x.cuentas]
     if len(set(codigos))!=len(codigos):raise HTTPException(422,'Códigos duplicados')
     if any(not re.fullmatch(r'[A-Za-z0-9._-]+',c) for c in codigos):raise HTTPException(422,'Código de cuenta inválido')
+    if any('346/2021' in a.fuente or '346 de 2021' in a.fuente.lower() for a in x.cuentas):
+        raise HTTPException(422,'Res. 346/2021 fue derogada; coteje Res. 272/2024 y el régimen actual')
     with conn() as c:
         c.execute('BEGIN IMMEDIATE')
         c.execute('DELETE FROM plan_cuentas')
