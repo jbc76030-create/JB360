@@ -16,7 +16,7 @@ Fecha de cotejo: 26 de octubre de 2026. Fuentes: textos PDF publicados por la Ga
 
 - Separa bienes y servicios, propone sus importes desde los tickets y reversiones por mes local de Cuba y deja al responsable revisar la base gravada.
 - Aplica aritmética exacta en centavos a los conceptos de la tabla, registra el nombre y enlace de la fuente en cada línea y rechaza actores, períodos o combinaciones no admitidos.
-- Requiere dos confirmaciones de revisión de bases y de régimen/excepciones. **Estas marcas no son aprobación jurídica ni sustituyen la revisión documental.**
+- Requiere un vector fiscal cargado, cotejado administrativamente para el actor, conceptos y mes completo, y dos confirmaciones de revisión de bases y de régimen/excepciones. **Estas marcas no son aprobación jurídica ni sustituyen la revisión documental.**
 
 ## Qué falta para una liquidación oficial por contribuyente
 
