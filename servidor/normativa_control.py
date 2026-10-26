@@ -18,10 +18,12 @@ class Entrada(BaseModel):
 class Lote(BaseModel):
     version:str=Field(min_length=2,max_length=80)
     cuentas:list[Entrada]=Field(min_length=1,max_length=6000)
-with conn() as c:
+def setup():
+  with conn() as c:
     c.execute("CREATE TABLE IF NOT EXISTS normativa_lotes(id INTEGER PRIMARY KEY, version TEXT NOT NULL, estado TEXT NOT NULL, fecha TEXT NOT NULL, usuario TEXT NOT NULL)")
     c.execute("CREATE TABLE IF NOT EXISTS normativa_cuentas(id INTEGER PRIMARY KEY, lote_id INTEGER NOT NULL, codigo TEXT NOT NULL, nombre TEXT NOT NULL, naturaleza TEXT NOT NULL, uso_contenido TEXT NOT NULL, norma TEXT NOT NULL, anexo TEXT NOT NULL, pagina TEXT NOT NULL, regimen TEXT NOT NULL, estado TEXT NOT NULL DEFAULT 'PENDIENTE_COTEJO', UNIQUE(lote_id,codigo,regimen))")
     c.execute("CREATE TABLE IF NOT EXISTS normativa_documentos(id INTEGER PRIMARY KEY, norma TEXT NOT NULL, filename TEXT NOT NULL, content BLOB NOT NULL, sha256 TEXT NOT NULL, uploaded_at TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id), estado TEXT NOT NULL DEFAULT 'PENDIENTE_COTEJO')")
+setup()
 
 class NormDocument(BaseModel):
     norma:str=Field(min_length=5,max_length=40)
