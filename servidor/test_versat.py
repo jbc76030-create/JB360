@@ -6,7 +6,7 @@ def test_accounting_bridge():
         os.environ['JB360_DB']=td+'/test.sqlite3'
         os.environ['JB360_ADMIN_PASSWORD']='secure-test-password'
         sys.path.insert(0,os.path.dirname(__file__))
-        for name in ('fiscal2026','normativa_control','catalogo_api','versat_bridge','commercial','extension','server'):
+        for name in ('vector_fiscal', 'fiscal2026','normativa_control','catalogo_api','versat_bridge','commercial','extension','server'):
             sys.modules.pop(name,None)
         import server
         server.init()
