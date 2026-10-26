@@ -10,9 +10,12 @@ def test_catalogo_y_plan():
         with TestClient(server.app) as c:
             t=c.post('/api/login',json={'username':'admin','password':'ClaveTemporalMuyLarga*123'}).json()['token'];h={'Authorization':'Bearer '+t}
             r=c.get('/api/contabilidad/catalogo?regimen=tcp',headers=h)
-            assert r.status_code==200 and any(a['codigo']=='100' for a in r.json()['cuentas'])
+            assert r.status_code==200 and r.json()['cuentas']==[]
+            assert 'no' in r.json()['advertencia'].lower()
             assert c.get('/api/contabilidad/catalogo?regimen=desconocido',headers=h).status_code==422
             plan={'regimen':'tcp','version':'local-1','cuentas':[{'codigo':'100','nombre':'Efectivo en Caja','naturaleza':'activo','uso':'Registro de cobros y pagos en caja','fuente':'Res. 346/2021 MFP'}]}
+            assert c.post('/api/admin/contabilidad/plan',json=plan,headers=h).status_code==422
+            plan['cuentas'][0]['fuente']='Plan propio sujeto a cotejo Res. 272/2024'
             assert c.post('/api/admin/contabilidad/plan',json=plan,headers=h).json()['estado']=='PENDIENTE_REVISION_CONTABLE'
             assert c.get('/api/admin/contabilidad/plan',headers=h).json()['cuentas'][0]['aprobado']==0
             plan['cuentas'].append(plan['cuentas'][0]);assert c.post('/api/admin/contabilidad/plan',json=plan,headers=h).status_code==422
