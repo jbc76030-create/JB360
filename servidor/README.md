@@ -2,7 +2,7 @@
 
 Este paquete ofrece **una misma dirección de acceso para varios negocios**. Cada negocio tiene una base SQLite separada, sus usuarios y su licencia semestral. El administrador general registra negocios, controla las cuentas operadoras y confirma las renovaciones. Incluye productos, inventario, ventas de bienes, servicios, pagos mixtos, reversión íntegra de tickets, otros ingresos y gastos, terceros, documentos comerciales borrador, informes y simulación fiscal condicionada de 2026.
 
-Para vender acceso a varios clientes desde Android, ordenador y tableta, utiliza [OPERACION_EN_INTERNET.md](OPERACION_EN_INTERNET.md). Incluye `Dockerfile`, `compose.yaml`, `Caddyfile`, creación privada de la clave general y copia integral de todas las bases. Requiere tu servidor y dominio; este paquete aún no está desplegado en una URL pública.
+Para probar el acceso remoto **sin dominio ni servidor propio**, usa [PILOTO_GRATUITO_PYTHONANYWHERE.md](PILOTO_GRATUITO_PYTHONANYWHERE.md). Incluye un adaptador WSGI para el servidor existente, persistencia SQLite y una URL HTTPS gratuita, con límites de espacio, capacidad y caducidad mensual. Necesita que el titular cree su cuenta de alojamiento y active su subdominio; este paquete aún no está desplegado en una URL pública. Para una instalación en servidor y dominio propios, consulta [OPERACION_EN_INTERNET.md](OPERACION_EN_INTERNET.md) y su plantilla Docker/Caddy.
 
 ## Instalación local para evaluación
 
@@ -63,4 +63,4 @@ Consulta [PRUEBAS_Y_ALCANCE.md](PRUEBAS_Y_ALCANCE.md) para ver cada ejemplo, su 
 
 No hay alojamiento productivo ni dominio/HTTPS asignado; tampoco hay pago bancario confirmado automáticamente, devolución parcial de tickets en este servidor, nómina/retenciones completas, declaraciones ONAT ni certificación de software contable. El puente VERSAT es una exportación genérica para revisión, sin formato oficial de importación comprobado. Antes de trabajar con datos reales hace falta validar restauración de respaldo, seguridad y dispositivos en el entorno de destino. La pantalla se comprobó por contrato de botones e IDs y la API por ejemplos; no se han pulsado físicamente todos los botones en todos los navegadores.
 
-La página pública de GitHub Pages `Web/jb360/` es una aplicación local de navegador distinta: sus datos no se sincronizan con este servidor y su licencia no está controlada por él.
+La página pública de GitHub Pages `Web/jb360/` es una aplicación local de navegador distinta: sus datos no se sincronizan con este servidor y su licencia no está controlada por él. GitHub Pages no permite usar su hospedaje gratuito para software comercial como servicio; no lo utilices como alojamiento de venta de licencias.
