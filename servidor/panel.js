@@ -1,10 +1,10 @@
-let token=sessionStorage.getItem('jb_token')||'',role='';const $=id=>document.getElementById(id),v=id=>$(id).value;
+let token='',role='';const $=id=>document.getElementById(id),v=id=>$(id).value;
 const d=new Date(),today=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');['from','to','effectiveDate'].forEach(id=>$(id).value=today);
 $('fiscalMonth').value=today.slice(0,7);
 async function api(path,method='GET',data){let res=await fetch('/api/'+path,{method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:data?JSON.stringify(data):undefined});let obj=await res.json();if(!res.ok)throw Error(obj.detail||res.statusText);return obj}
 async function run(fn){try{await fn()}catch(e){alert(e.message)}}
-async function signIn(){await run(async()=>{let r=await api('login','POST',{username:v('username'),password:v('password')});token=r.token;role=r.role;sessionStorage.setItem('jb_token',token);$('login').style.display='none';$('workspace').style.display='block';$('session').textContent=v('username')+' · '+role;let state=await license();if(!state.expired||role==='admin')await loadProducts()})}
-async function logout(){try{await api('logout','POST')}finally{sessionStorage.removeItem('jb_token');location.reload()}}
+async function signIn(){await run(async()=>{let r=await api('login','POST',{username:v('username'),password:v('password')});token=r.token;role=r.role;$('password').value='';$('login').style.display='none';$('workspace').style.display='block';$('session').textContent=v('username')+' · '+role;let state=await license();if(!state.expired||role==='admin')await loadProducts()})}
+async function logout(){try{await api('logout','POST')}finally{token='';location.reload()}}
 async function license(){let r=await api('license');$('license').textContent='Licencia hasta: '+r.expires_on+(r.expired?' · PENDIENTE / VENCIDA':'');$('admin').style.display=role==='admin'?'block':'none';const blocked=r.expired&&role!=='admin';$('licenseExpired').style.display=blocked?'block':'none';for(const id of ['parties','invoices','inventory','sales','operations','reports','fiscal','versat'])$(id).style.display=blocked?'none':'';return r}
 async function addProduct(){await run(async()=>{let r=await api('products','POST',{sku:v('sku'),name:v('productName'),price:v('price'),cost:v('cost'),stock:Number(v('stock'))});alert('Producto '+r.id+' creado');await loadProducts()})}
 async function loadProducts(){await run(async()=>{let r=await api('products');$('products').innerHTML='<table><tr><th>ID</th><th>SKU</th><th>Nombre</th><th>Existencia</th></tr>'+r.rows.map(p=>'<tr><td>'+p.id+'</td><td>'+esc(p.sku)+'</td><td>'+esc(p.name)+'</td><td>'+p.stock+'</td></tr>').join('')+'</table>'})}
