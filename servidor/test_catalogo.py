@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 def test_catalogo_y_plan():
     with tempfile.TemporaryDirectory() as td:
         os.environ['JB360_DB']=os.path.join(td,'test.sqlite3');os.environ['JB360_ADMIN_PASSWORD']='ClaveTemporalMuyLarga*123'
-        for name in ('fiscal2026','normativa_control','catalogo_api','versat_bridge','commercial','extension','server'):
+        for name in ('vector_fiscal', 'fiscal2026','normativa_control','catalogo_api','versat_bridge','commercial','extension','server'):
             sys.modules.pop(name,None)
         server=importlib.import_module('server')
         with TestClient(server.app) as c:
