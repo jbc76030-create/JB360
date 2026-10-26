@@ -12,10 +12,10 @@ python -m venv .venv
 export JB360_ADMIN_PASSWORD='una-clave-propia-larga-de-al-menos-14-caracteres'
 export JB360_DB="$PWD/datos/jb360.sqlite3"
 mkdir -p datos
-.venv/bin/python -m uvicorn server:app --host 127.0.0.1 --port 8000
+.venv/bin/python iniciar.py
 ```
 
-En Windows, configura esas variables de entorno y ejecuta el `python` de tu entorno virtual. Abre `http://127.0.0.1:8000/` en el equipo servidor. La app cliente utiliza la misma dirección con su usuario operador; la sección Administración solo aparece al administrador. **No expongas este servidor de desarrollo directamente a Internet.** Para acceso desde otros equipos se requiere alojamiento permanente, HTTPS, protección de la base y copias de seguridad.
+En Windows PowerShell, desde esta carpeta: `py -m venv .venv`, luego `./.venv/Scripts/python.exe -m pip install -r requirements.txt` y `./.venv/Scripts/python.exe iniciar.py`. El iniciador solicita la contraseña del administrador sin mostrarla y crea `datos/jb360.sqlite3`. Si configura las variables de entorno antes, las respeta. Abre `http://127.0.0.1:8000/` en el equipo servidor. La app cliente utiliza la misma dirección con su usuario operador; la sección Administración solo aparece al administrador. **No expongas este servidor de desarrollo directamente a Internet.** Para acceso desde otros equipos se requiere alojamiento permanente, HTTPS, protección de la base y copias de seguridad.
 
 ## Activación de clientes
 
