@@ -1,6 +1,6 @@
 # JB360 · Pruebas reproducibles y límites (26/10/2026)
 
-Comando: `python -m pytest -q` desde `servidor/`, tras instalar `requirements.txt`. Resultado local de esta versión: **12 pruebas correctas**. `node --check panel.js` pasó. Las pruebas usan bases SQLite temporales; no incluyen información de clientes reales.
+Comando: `python -m pytest -q` desde `servidor/`, tras instalar `requirements.txt`. Resultado local de esta versión: **14 pruebas correctas**. `node --check panel.js` pasó. Las pruebas usan bases SQLite temporales; no incluyen información de clientes reales.
 
 | Proceso | Ejemplo comprobado | Resultado |
 |---|---|---|
@@ -9,7 +9,10 @@ Comando: `python -m pytest -q` desde `servidor/`, tras instalar `requirements.tx
 | Dos clientes independientes | Dos procesos y bases A/B: se activa A, se carga su vector y vende 100 CUP; B queda vencido y sin esos datos | Licencias, sesiones, vectores y ventas separados |
 | Dos negocios en una URL | Ambos entran como `vendedor` con código y clave distintos; el administrador activa uno y el otro queda vencido; venden simultáneamente servicios de 100 y 250 CUP | Sesiones, licencias, informes, vector y PDF normativo aislados. Acceso cruzado 403; operador no renueva 403; respaldo del negocio exige clave general |
 | Instalación local y restauración | Arranca con clave inicial, crea operador, activa seis meses, descarga respaldo; reinicia desde la copia sin repetir la variable de la clave | Conserva administrador, operador y licencia activa después de restaurar |
+| Alta segura del servidor | `bootstrap.py` crea cuenta general con clave introducida en consola y se intenta ejecutar de nuevo | Cuenta creada una vez; no se imprime clave ni se reemplaza el administrador existente |
 | Claves por negocio | Administrador restablece la del operador de un negocio tras verificar su clave; otro operador intenta y se rechaza | La sesión anterior queda revocada; nueva clave entra y datos del negocio persisten |
+| Suspensión de operador | El administrador deshabilita al operador de B, revoca su sesión y después lo habilita | B no entra mientras está suspendido; A sigue trabajando y B recupera su acceso al ser habilitado |
+| Respaldo multiempresa | Un servidor con bases central, A y B descarga ZIP transaccional con manifiesto SHA-256 | Tres SQLite íntegras; sesiones excluidas; licencia A activa y B pendiente preservadas |
 | Productos e inventario | 30 ventas simultáneas de un bien con stock 100; devolución de una | Stock 70 y luego 71; no doble devolución |
 | Servicio y pagos | Servicio de 150 CUP, costo 30; venta con efectivo/transferencia; reversión de servicio | Informe desglosa servicio; margen 120 antes de reversión; devolución no altera inventario |
 | Fecha de Cuba | Servicio vendido a las 01:00 UTC del 1/10 y anulado a las 05:00 UTC | Venta corresponde al 30/9 local y devolución al 1/10 |
@@ -24,7 +27,7 @@ También se ejecutó una prueba HTTP real: arranque, entrada de administrador, a
 ## Sin validación de producción
 
 - El enlace GitHub Pages es comercial y local por navegador. El servidor con roles y vectores necesita alojamiento HTTPS para un enlace común a clientes remotos.
-- Se requieren certificado confiable, red o dominio, servidor, copias externas, prueba de restauración y revisión de seguridad en el alojamiento real. Los lanzadores Windows y los navegadores móviles no se ensayaron físicamente.
+- Se requieren certificado confiable, red o dominio, servidor, copias externas, prueba de restauración y revisión de seguridad en el alojamiento real. La plantilla Docker/Caddy, los lanzadores Windows y los navegadores móviles no se ensayaron físicamente en ese entorno.
 - El simulador no rellena modelos ONAT. DJ-01 e instructivo se descargan de la ONAT sin modificación; otros modelos y todas las casillas/fórmulas siguen sin cotejo integral.
 - El plan y normatador subidos permanecen pendientes; no habilitan comprobantes contables automáticos. El CSV VERSAT es precontabilización revisable, sin importación oficial demostrada.
 - No hay pruebas de impresora, teléfono Android, conciliación bancaria real, nómina completa ni autorización de obligaciones fiscales de clientes específicos.
