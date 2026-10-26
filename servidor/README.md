@@ -56,6 +56,8 @@ Los [modelos originales ONAT localizados](MODELOS_ONAT.md) se enlazan sin modifi
 
 Pruebas de API: `python -m pytest -q`. Diez escenarios automatizados incluyen 30 ventas concurrentes, stock, reversión, servicio, pagos mixtos, terceros, roles, licencias de dos negocios aislados, informes con separación de bienes y servicios, cambio de día local de Cuba, vector y respaldo, límite de acceso, enlaces de botones, CSV de precontabilización y ejemplos fiscales. No equivalen a un ensayo de producción con equipos, impresoras, estados bancarios, vector fiscal real y contador de cada cliente.
 
+Consulta [PRUEBAS_Y_ALCANCE.md](PRUEBAS_Y_ALCANCE.md) para ver cada ejemplo, su resultado y los puntos aún sin comprobar.
+
 ## Alcance que aún impide explotación pública como sistema completo
 
 No hay alojamiento productivo ni dominio/HTTPS asignado; tampoco hay aislamiento multiempresa dentro de una sola instancia, pago bancario confirmado automáticamente, devolución parcial de tickets en este servidor, nómina/retenciones completas, declaraciones ONAT ni certificación de software contable. El puente VERSAT es una exportación genérica para revisión, sin formato oficial de importación comprobado. Antes de trabajar con datos reales hace falta validar restauración de respaldo, seguridad y dispositivos en el entorno de destino.
