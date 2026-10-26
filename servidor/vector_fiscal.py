@@ -70,11 +70,16 @@ def latest_vector():
         return c.execute('SELECT * FROM fiscal_vectors ORDER BY id DESC LIMIT 1').fetchone()
 
 
+def active_vector():
+    with conn() as c:
+        return c.execute("SELECT * FROM fiscal_vectors WHERE status='reviewed' ORDER BY id DESC LIMIT 1").fetchone()
+
+
 @app.get('/api/fiscal/vector')
 def vector_info(authorization: str | None = Header(None)):
     licensed(authorization)
-    return {'vector': public_row(latest_vector()),
-            'notice': 'El archivo se conserva en esta instalación. Un administrador revisa la clasificación; el sistema no lee ni certifica automáticamente su contenido.'}
+    return {'vector': public_row(latest_vector()), 'active_vector': public_row(active_vector()),
+            'notice': 'Una nueva carga queda pendiente sin reemplazar la clasificación activa hasta que el administrador la revise. El sistema no lee ni certifica automáticamente el documento.'}
 
 
 @app.post('/api/fiscal/vector')
@@ -173,8 +178,8 @@ def vector_review(x: VectorReview, authorization: str | None = Header(None)):
 
 
 def current_vector(actor, month, situation):
-    row = latest_vector()
-    if not row or row['status'] != 'reviewed':
+    row = active_vector()
+    if not row:
         raise HTTPException(409, 'Suba el vector fiscal aprobado y espere su revisión administrativa')
     if row['actor'] != actor or row['situation'] != situation:
         raise HTTPException(422, 'El actor o la situación no coinciden con el vector revisado')
