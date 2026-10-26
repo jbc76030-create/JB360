@@ -1,15 +1,38 @@
 """JB360 shared operations pilot. NOT a certified fiscal accounting engine."""
-import os, sqlite3, hmac, hashlib, secrets, datetime, json, csv, io
+import os, sqlite3, hmac, hashlib, secrets, datetime, json, csv, io, time, tempfile
 from zoneinfo import ZoneInfo
 from decimal import Decimal, InvalidOperation
 from contextlib import contextmanager
-from fastapi import FastAPI, HTTPException, Header
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, FileResponse
+from starlette.background import BackgroundTask
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, Field
 
 DB=os.environ.get('JB360_DB','jb360_shared.sqlite3')
 ADMIN_PASSWORD=os.environ.get('JB360_ADMIN_PASSWORD')
 app=FastAPI(title='JB360 operaciones compartidas - piloto')
+allowed_hosts=[x.strip() for x in os.environ.get('JB360_ALLOWED_HOSTS','127.0.0.1,localhost,testserver').split(',') if x.strip()]
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+
+@app.middleware('http')
+async def security_headers(request:Request,call_next):
+    length=request.headers.get('content-length','')
+    if length.isdigit() and int(length)>8*1024*1024:
+        response=JSONResponse({'detail':'Solicitud demasiado grande'},status_code=413)
+    else:
+        response=await call_next(request)
+    response.headers['X-Content-Type-Options']='nosniff'
+    response.headers['X-Frame-Options']='DENY'
+    response.headers['Referrer-Policy']='no-referrer'
+    response.headers['Permissions-Policy']='camera=(), microphone=(), geolocation=()'
+    response.headers['Cross-Origin-Opener-Policy']='same-origin'
+    response.headers['Cross-Origin-Resource-Policy']='same-origin'
+    response.headers['Content-Security-Policy']="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; form-action 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'"
+    response.headers['Cache-Control']='no-store'
+    if request.url.scheme=='https':
+        response.headers['Strict-Transport-Security']='max-age=31536000; includeSubDomains'
+    return response
 
 def now(): return datetime.datetime.now(datetime.timezone.utc).isoformat()
 def business_today(): return datetime.datetime.now(ZoneInfo('America/Havana')).date()
@@ -32,6 +55,8 @@ def init():
         CREATE TABLE IF NOT EXISTS tokens(token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),created_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS operations(id INTEGER PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('income','expense')),category TEXT NOT NULL, description TEXT NOT NULL, amount_cents INTEGER NOT NULL CHECK(amount_cents>0),payment TEXT NOT NULL, point TEXT NOT NULL, reference TEXT NOT NULL, actor TEXT NOT NULL, recorded_at TEXT NOT NULL, effective_date TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id), reversal_of INTEGER REFERENCES operations(id), UNIQUE(reversal_of));
         CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,at TEXT NOT NULL,user_id INTEGER NOT NULL,action TEXT NOT NULL,detail TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS login_failures(id INTEGER PRIMARY KEY,username TEXT NOT NULL,ip TEXT NOT NULL,at_epoch INTEGER NOT NULL);
+        CREATE INDEX IF NOT EXISTS ix_login_failures ON login_failures(username,ip,at_epoch);
         CREATE INDEX IF NOT EXISTS ix_operations_period ON operations(effective_date,point,kind);
         ''')
 
@@ -57,10 +82,11 @@ def admin(auth):
     if u['role']!='admin':raise HTTPException(403,'Solo administrador')
     return u
 
-class Login(BaseModel): username:str; password:str
-class UserNew(BaseModel):username:str=Field(min_length=3,max_length=60);password:str=Field(min_length=10);role:str='operator'
+class Login(BaseModel): username:str=Field(min_length=1,max_length=60); password:str=Field(min_length=1,max_length=128)
+class UserNew(BaseModel):username:str=Field(min_length=3,max_length=60);password:str=Field(min_length=12,max_length=128);role:str='operator'
 class Operation(BaseModel):kind:str;category:str=Field(min_length=1,max_length=80);description:str=Field(min_length=1,max_length=300);amount:str;payment:str=Field(min_length=1,max_length=40);point:str=Field(min_length=1,max_length=80);reference:str=Field(min_length=1,max_length=100);actor:str=Field(min_length=1,max_length=30);effective_date:datetime.date
 class Reverse(BaseModel):reason:str=Field(min_length=5,max_length=500)
+class BackupRequest(BaseModel):password:str
 
 @app.on_event('startup')
 def start():
@@ -72,11 +98,23 @@ def start():
             s=secrets.token_hex(16);c.execute('INSERT INTO users(username,salt,password_hash,role) VALUES(?,?,?,?)',('admin',s,hashpw(ADMIN_PASSWORD,s),'admin'))
 
 @app.post('/api/login')
-def login(x:Login):
+def login(x:Login,request:Request):
+    ip=request.client.host if request.client else 'unknown'
+    epoch=int(time.time())
     with conn() as c:
+        c.execute('BEGIN IMMEDIATE')
+        c.execute('DELETE FROM login_failures WHERE at_epoch<?',(epoch-900,))
+        failed=c.execute('SELECT COUNT(*) FROM login_failures WHERE username=? AND ip=?',(x.username,ip)).fetchone()[0]
+        if failed>=5:raise HTTPException(429,'Demasiados intentos; espere quince minutos')
         u=c.execute('SELECT * FROM users WHERE username=?',(x.username,)).fetchone()
-        if not u or not hmac.compare_digest(u['password_hash'],hashpw(x.password,u['salt'])):raise HTTPException(401,'Credenciales incorrectas')
+        candidate=hashpw(x.password,u['salt'] if u else '00'*16)
+        if not u or not hmac.compare_digest(u['password_hash'],candidate):
+            c.execute('INSERT INTO login_failures(username,ip,at_epoch) VALUES(?,?,?)',(x.username,ip,epoch))
+            c.commit()
+            raise HTTPException(401,'Credenciales incorrectas')
+        c.execute('DELETE FROM login_failures WHERE username=? AND ip=?',(x.username,ip))
         t=secrets.token_urlsafe(40);c.execute('INSERT INTO tokens VALUES(?,?,?)',(hashlib.sha256(t.encode()).hexdigest(),u['id'],now()))
+        c.commit()
         return {'token':t,'role':u['role']}
 
 @app.post('/api/logout')
@@ -156,6 +194,10 @@ def export(start:datetime.date,end:datetime.date,authorization:str|None=Header(N
 @app.get('/',response_class=HTMLResponse)
 def home():return open(os.path.join(os.path.dirname(__file__),'panel.html'),encoding='utf8').read()
 
+@app.get('/app.js')
+def panel_script():
+    return FileResponse(os.path.join(os.path.dirname(__file__),'panel.js'),media_type='text/javascript')
+
 @app.get('/api/audit')
 def audit(start:datetime.date,end:datetime.date,authorization:str|None=Header(None)):
     admin(authorization)
@@ -163,6 +205,32 @@ def audit(start:datetime.date,end:datetime.date,authorization:str|None=Header(No
     with conn() as c:
         rows=c.execute('SELECT a.id,a.at,u.username,a.action,a.detail FROM audit a JOIN users u ON u.id=a.user_id WHERE substr(a.at,1,10) BETWEEN ? AND ? ORDER BY a.id',(str(start),str(end))).fetchall()
     return {'rows':[dict(r) for r in rows]}
+
+@app.post('/api/admin/backup')
+def backup_download(x:BackupRequest,authorization:str|None=Header(None)):
+    u=admin(authorization)
+    if not hmac.compare_digest(u['password_hash'],hashpw(x.password,u['salt'])):
+        raise HTTPException(403,'Contraseña administrativa incorrecta')
+    fd,path=tempfile.mkstemp(prefix='jb360-backup-',suffix='.sqlite3')
+    os.close(fd)
+    try:
+        with conn() as source, sqlite3.connect(path) as target:
+            source.backup(target)
+        with sqlite3.connect(path) as copy:
+            copy.execute('PRAGMA journal_mode=DELETE')
+            copy.execute('DELETE FROM tokens')
+            copy.execute('DELETE FROM login_failures')
+            if copy.execute('PRAGMA integrity_check').fetchone()[0]!='ok':
+                raise RuntimeError('Copia con error de integridad')
+        with conn() as c:
+            c.execute('INSERT INTO audit(at,user_id,action,detail) VALUES(?,?,?,?)',
+                      (now(),u['id'],'download_backup','Copia SQLite sin sesiones activas'))
+        return FileResponse(path,media_type='application/octet-stream',
+                            filename='JB360_respaldo_'+str(business_today())+'.sqlite3',
+                            background=BackgroundTask(os.unlink,path))
+    except Exception:
+        if os.path.exists(path):os.unlink(path)
+        raise
 
 # Integrated endpoints are registered after base endpoints.
 import extension
@@ -172,4 +240,5 @@ import catalogo_api
 
 import normativa_control  # noqa: E402
 
+import vector_fiscal  # custodia y revision del vector antes de simular
 import fiscal2026  # reglas acotadas de 2026 con fuentes oficiales
