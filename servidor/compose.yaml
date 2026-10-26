@@ -1,0 +1,62 @@
+services:
+  app:
+    build: .
+    environment:
+      JB360_DB: /data/jb360.sqlite3
+      JB360_ALLOWED_HOSTS: ${JB360_DOMAIN:?Indique JB360_DOMAIN en .env}
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - jb360_data:/data
+    networks:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,noexec,size=2g
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/',timeout=2)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  web:
+    image: caddy:2
+    environment:
+      JB360_DOMAIN: ${JB360_DOMAIN:?Indique JB360_DOMAIN en .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - backend
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  jb360_data:
+  caddy_data:
+  caddy_config:
