@@ -26,7 +26,8 @@ ALLOWED = {
     'estatal': {'sales_services', 'profit'},
 }
 
-with conn() as c:
+def setup():
+  with conn() as c:
     c.execute('''CREATE TABLE IF NOT EXISTS fiscal_vectors(
         id INTEGER PRIMARY KEY, actor TEXT NOT NULL, nit TEXT NOT NULL, filename TEXT NOT NULL,
         mime TEXT NOT NULL, content BLOB NOT NULL, sha256 TEXT NOT NULL, approved_on TEXT NOT NULL,
@@ -34,6 +35,7 @@ with conn() as c:
         status TEXT NOT NULL CHECK(status IN ('pending','reviewed')),
         situation TEXT, obligations_json TEXT, valid_from TEXT, valid_to TEXT,
         review_note TEXT, reviewed_at TEXT, reviewed_by INTEGER REFERENCES users(id))''')
+setup()
 
 
 class VectorUpload(BaseModel):
