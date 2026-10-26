@@ -149,6 +149,8 @@ def admin(auth):
 class Login(BaseModel): username:str=Field(min_length=1,max_length=60); password:str=Field(min_length=1,max_length=128); tenant:str=''
 class UserNew(BaseModel):username:str=Field(min_length=3,max_length=60);password:str=Field(min_length=12,max_length=128);role:str='operator'
 class TenantNew(BaseModel):slug:str=Field(pattern=r'^[a-z][a-z0-9-]{2,39}$');name:str=Field(min_length=3,max_length=160);username:str=Field(min_length=3,max_length=60);password:str=Field(min_length=12,max_length=128)
+class PasswordChange(BaseModel):old_password:str;new_password:str=Field(min_length=12,max_length=128)
+class PasswordReset(BaseModel):admin_password:str;new_password:str=Field(min_length=12,max_length=128)
 class Operation(BaseModel):kind:str;category:str=Field(min_length=1,max_length=80);description:str=Field(min_length=1,max_length=300);amount:str;payment:str=Field(min_length=1,max_length=40);point:str=Field(min_length=1,max_length=80);reference:str=Field(min_length=1,max_length=100);actor:str=Field(min_length=1,max_length=30);effective_date:datetime.date
 class Reverse(BaseModel):reason:str=Field(min_length=5,max_length=500)
 class BackupRequest(BaseModel):password:str
@@ -243,13 +245,55 @@ def logout(authorization:str|None=Header(None)):
 @app.post('/api/users')
 def create_user(x:UserNew,authorization:str|None=Header(None)):
     u=admin(authorization)
-    if x.role!='operator':raise HTTPException(422,'Solo se pueden crear operadores desde la aplicación')
+    if x.role!='operator' or x.username=='__jb360_root__':raise HTTPException(422,'Solo se pueden crear operadores desde la aplicación')
     s=secrets.token_hex(16)
     with conn() as c:
         try:c.execute('INSERT INTO users(username,salt,password_hash,role) VALUES(?,?,?,?)',(x.username,s,hashpw(x.password,s),x.role))
         except sqlite3.IntegrityError:raise HTTPException(409,'Usuario existente')
         c.execute('INSERT INTO audit(at,user_id,action,detail) VALUES(?,?,?,?)',(now(),u['id'],'create_user',x.username))
     return {'ok':True}
+
+def admin_password_user(u,authorization):
+    return token_user(authorization,root=True) if tenant_slug.get() and authorization.startswith('Bearer root.') else u
+
+@app.get('/api/admin/users')
+def list_users(authorization:str|None=Header(None)):
+    admin(authorization)
+    with conn() as c:
+        return {'rows':[dict(r) for r in c.execute("SELECT id,username,role FROM users WHERE username!='__jb360_root__' ORDER BY username")]}
+
+@app.post('/api/account/password')
+def change_password(x:PasswordChange,authorization:str|None=Header(None)):
+    u=require(authorization,allow_expired=True)
+    root_session=bool(tenant_slug.get() and authorization.startswith('Bearer root.'))
+    actual=admin_password_user(u,authorization)
+    if not hmac.compare_digest(actual['password_hash'],hashpw(x.old_password,actual['salt'])):
+        raise HTTPException(403,'Contraseña actual incorrecta')
+    salt=secrets.token_hex(16)
+    with conn(root=root_session) as c:
+        c.execute('BEGIN IMMEDIATE')
+        c.execute('UPDATE users SET salt=?,password_hash=? WHERE id=?',(salt,hashpw(x.new_password,salt),actual['id']))
+        c.execute('DELETE FROM tokens WHERE user_id=?',(actual['id'],))
+        c.execute('INSERT INTO audit(at,user_id,action,detail) VALUES(?,?,?,?)',(now(),actual['id'],'change_password','Sesiones anteriores revocadas'))
+        c.commit()
+    return {'ok':True,'message':'Clave actualizada; vuelva a iniciar sesión'}
+
+@app.post('/api/admin/users/{user_id}/password')
+def reset_user_password(user_id:int,x:PasswordReset,authorization:str|None=Header(None)):
+    u=admin(authorization)
+    actual=admin_password_user(u,authorization)
+    if not hmac.compare_digest(actual['password_hash'],hashpw(x.admin_password,actual['salt'])):
+        raise HTTPException(403,'Contraseña administrativa incorrecta')
+    with conn() as c:
+        c.execute('BEGIN IMMEDIATE')
+        target=c.execute('SELECT id,username FROM users WHERE id=? AND role=?',(user_id,'operator')).fetchone()
+        if not target:raise HTTPException(404,'Operador inexistente')
+        salt=secrets.token_hex(16)
+        c.execute('UPDATE users SET salt=?,password_hash=? WHERE id=?',(salt,hashpw(x.new_password,salt),user_id))
+        c.execute('DELETE FROM tokens WHERE user_id=?',(user_id,))
+        c.execute('INSERT INTO audit(at,user_id,action,detail) VALUES(?,?,?,?)',(now(),u['id'],'reset_operator_password',target['username']))
+        c.commit()
+    return {'ok':True,'message':'Clave del operador cambiada; sesiones anteriores revocadas'}
 
 @app.post('/api/operations')
 def operation(x:Operation,authorization:str|None=Header(None)):
@@ -326,7 +370,7 @@ def audit(start:datetime.date,end:datetime.date,authorization:str|None=Header(No
 @app.post('/api/admin/backup')
 def backup_download(x:BackupRequest,authorization:str|None=Header(None)):
     u=admin(authorization)
-    password_user=token_user(authorization,root=True) if tenant_slug.get() and authorization.startswith('Bearer root.') else u
+    password_user=admin_password_user(u,authorization)
     if not hmac.compare_digest(password_user['password_hash'],hashpw(x.password,password_user['salt'])):
         raise HTTPException(403,'Contraseña administrativa incorrecta')
     fd,path=tempfile.mkstemp(prefix='jb360-backup-',suffix='.sqlite3')
