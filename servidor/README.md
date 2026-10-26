@@ -4,18 +4,17 @@ Este paquete ofrece **una misma dirección de acceso para varios negocios**. Cad
 
 ## Instalación local para evaluación
 
+Para instalar una copia por cliente y acceder desde otros dispositivos, sigue [INSTALACION_POR_CLIENTE.md](INSTALACION_POR_CLIENTE.md). Incluye lanzadores de Windows y macOS/Linux. La app funciona como servidor web local; teléfono y tableta acceden mediante navegador cuando el servidor esté disponible por una red segura. No contiene una app nativa autónoma para Android/iOS.
+
 Requiere Python 3.11 o posterior. Desde esta carpeta:
 
 ```bash
 python -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-export JB360_ADMIN_PASSWORD='una-clave-propia-larga-de-al-menos-14-caracteres'
-export JB360_DB="$PWD/datos/jb360.sqlite3"
-mkdir -p datos
 .venv/bin/python iniciar.py
 ```
 
-En Windows PowerShell, desde esta carpeta: `py -m venv .venv`, luego `./.venv/Scripts/python.exe -m pip install -r requirements.txt` y `./.venv/Scripts/python.exe iniciar.py`. El iniciador solicita la contraseña del administrador sin mostrarla y crea `datos/jb360.sqlite3`. Si configura las variables de entorno antes, las respeta. Abre `http://127.0.0.1:8000/` en el equipo servidor. **No expongas este servidor de desarrollo directamente a Internet.** Para acceso desde otros equipos se requiere alojamiento permanente, HTTPS, protección de la base y copias de seguridad.
+En Windows abre `INSTALAR_WINDOWS.cmd` y luego `ABRIR_WINDOWS.cmd` en las siguientes sesiones. En macOS/Linux usa `sh INSTALAR_MAC_LINUX.sh` y luego `sh ABRIR_MAC_LINUX.sh`. El iniciador solicita la contraseña del administrador solo cuando la base todavía no tiene usuarios; no la escribe en un archivo. Abre `http://127.0.0.1:8000/` en el equipo servidor. **No expongas este servidor de desarrollo directamente a Internet.** Para acceso desde otros equipos se requiere red adecuada, HTTPS, protección de la base y copias de seguridad.
 
 ## Acceso de administrador y clientes
 
@@ -54,7 +53,7 @@ Lee [NORMAS_FISCALES_2026.md](NORMAS_FISCALES_2026.md). La app propone importes 
 
 Los [modelos originales ONAT localizados](MODELOS_ONAT.md) se enlazan sin modificar; la app aún no rellena ni presenta sus declaraciones.
 
-Pruebas de API: `python -m pytest -q`. Once escenarios automatizados incluyen dos negocios simultáneos en una URL, 30 ventas concurrentes, stock, reversión, servicio, pagos mixtos, terceros, roles, licencias aisladas, informes, cambio de día local de Cuba, vector y respaldo, límite de acceso, enlaces de botones, CSV de precontabilización y ejemplos fiscales. No equivalen a un ensayo de producción con equipos, impresoras, estados bancarios, vector fiscal real y contador de cada cliente.
+Pruebas de API: `python -m pytest -q`. Doce escenarios automatizados incluyen instalación y reinicio local sin repetir el secreto de arranque, dos negocios simultáneos en una URL, 30 ventas concurrentes, stock, reversión, servicio, pagos mixtos, terceros, roles, licencias aisladas, informes, cambio de día local de Cuba, vector y respaldo, límite de acceso, enlaces de botones, CSV de precontabilización y ejemplos fiscales. No equivalen a un ensayo de producción con equipos, impresoras, estados bancarios, vector fiscal real y contador de cada cliente.
 
 Consulta [PRUEBAS_Y_ALCANCE.md](PRUEBAS_Y_ALCANCE.md) para ver cada ejemplo, su resultado y los puntos aún sin comprobar.
 
