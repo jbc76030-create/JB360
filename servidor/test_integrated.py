@@ -6,7 +6,7 @@ def test_end_to_end():
     with tempfile.TemporaryDirectory() as tmp:
         os.environ['JB360_DB']=tmp+'/data.sqlite3';os.environ['JB360_ADMIN_PASSWORD']='A-strong-admin-password-2026'
         sys.path.insert(0,os.path.dirname(__file__))
-        for name in ('fiscal2026','normativa_control','catalogo_api','versat_bridge','commercial','extension','server'):
+        for name in ('vector_fiscal', 'fiscal2026','normativa_control','catalogo_api','versat_bridge','commercial','extension','server'):
             sys.modules.pop(name,None)
         server=importlib.import_module('server')
         with TestClient(server.app) as client:
