@@ -77,7 +77,7 @@ def conn(root=False):
 
 def init():
     with conn() as c:
-        c.executescript('''CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, salt TEXT NOT NULL, password_hash TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('admin','operator')));
+        c.executescript('''CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, salt TEXT NOT NULL, password_hash TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('admin','operator')), active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)));
         CREATE TABLE IF NOT EXISTS tokens(token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),created_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS operations(id INTEGER PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('income','expense')),category TEXT NOT NULL, description TEXT NOT NULL, amount_cents INTEGER NOT NULL CHECK(amount_cents>0),payment TEXT NOT NULL, point TEXT NOT NULL, reference TEXT NOT NULL, actor TEXT NOT NULL, recorded_at TEXT NOT NULL, effective_date TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id), reversal_of INTEGER REFERENCES operations(id), UNIQUE(reversal_of));
         CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,at TEXT NOT NULL,user_id INTEGER NOT NULL,action TEXT NOT NULL,detail TEXT NOT NULL);
@@ -85,6 +85,8 @@ def init():
         CREATE INDEX IF NOT EXISTS ix_login_failures ON login_failures(username,ip,at_epoch);
         CREATE INDEX IF NOT EXISTS ix_operations_period ON operations(effective_date,point,kind);
         ''')
+        if 'active' not in {r['name'] for r in c.execute('PRAGMA table_info(users)')}:
+            c.execute('ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1')
 
 def tenant_path(slug):
     if not re.fullmatch(r'[a-z][a-z0-9-]{2,39}',slug) or slug=='root':
@@ -108,6 +110,7 @@ def token_user(auth,root=False):
     with conn(root=root) as c:
         row=c.execute('SELECT users.*,tokens.created_at AS token_created_at FROM tokens JOIN users ON users.id=tokens.user_id WHERE tokens.token_hash=?',(hashlib.sha256(auth[7:].encode()).hexdigest(),)).fetchone()
     if row is None:raise HTTPException(401,'Sesión inválida')
+    if not row['active']:raise HTTPException(401,'Cuenta deshabilitada')
     created=datetime.datetime.fromisoformat(row['token_created_at'])
     if datetime.datetime.now(datetime.timezone.utc)-created>datetime.timedelta(hours=12):
         raise HTTPException(401,'Sesión caducada; inicie sesión de nuevo')
@@ -151,6 +154,7 @@ class UserNew(BaseModel):username:str=Field(min_length=3,max_length=60);password
 class TenantNew(BaseModel):slug:str=Field(pattern=r'^[a-z][a-z0-9-]{2,39}$');name:str=Field(min_length=3,max_length=160);username:str=Field(min_length=3,max_length=60);password:str=Field(min_length=12,max_length=128)
 class PasswordChange(BaseModel):old_password:str;new_password:str=Field(min_length=12,max_length=128)
 class PasswordReset(BaseModel):admin_password:str;new_password:str=Field(min_length=12,max_length=128)
+class UserStatus(BaseModel):active:bool;admin_password:str
 class Operation(BaseModel):kind:str;category:str=Field(min_length=1,max_length=80);description:str=Field(min_length=1,max_length=300);amount:str;payment:str=Field(min_length=1,max_length=40);point:str=Field(min_length=1,max_length=80);reference:str=Field(min_length=1,max_length=100);actor:str=Field(min_length=1,max_length=30);effective_date:datetime.date
 class Reverse(BaseModel):reason:str=Field(min_length=5,max_length=500)
 class BackupRequest(BaseModel):password:str
@@ -164,6 +168,11 @@ def start():
             if not ADMIN_PASSWORD or len(ADMIN_PASSWORD)<14:
                 raise RuntimeError('Configure JB360_ADMIN_PASSWORD con al menos 14 caracteres antes del primer arranque')
             s=secrets.token_hex(16);c.execute('INSERT INTO users(username,salt,password_hash,role) VALUES(?,?,?,?)',('admin',s,hashpw(ADMIN_PASSWORD,s),'admin'))
+        slugs=[r['slug'] for r in c.execute('SELECT slug FROM tenants WHERE active=1')]
+    for slug in slugs:
+        try:path=tenant_path(slug)
+        except HTTPException:continue
+        with tenant_context(slug,path):init()
 
 @app.post('/api/login')
 def login(x:Login,request:Request):
@@ -186,6 +195,7 @@ def login_in_database(x,request,prefix):
             c.execute('INSERT INTO login_failures(username,ip,at_epoch) VALUES(?,?,?)',(x.username,ip,epoch))
             c.commit()
             raise HTTPException(401,'Credenciales incorrectas')
+        if not u['active']:raise HTTPException(403,'Cuenta deshabilitada; contacte al administrador')
         c.execute('DELETE FROM login_failures WHERE username=? AND ip=?',(x.username,ip))
         if u['username']=='__jb360_root__':raise HTTPException(403,'Cuenta reservada')
         t=prefix+secrets.token_urlsafe(40);c.execute('INSERT INTO tokens VALUES(?,?,?)',(hashlib.sha256(t.encode()).hexdigest(),u['id'],now()))
@@ -196,7 +206,21 @@ def login_in_database(x,request,prefix):
 def list_tenants(authorization:str|None=Header(None)):
     root_admin(authorization)
     with conn(root=True) as c:
-        return {'rows':[dict(r) for r in c.execute('SELECT slug,name,created_at,active FROM tenants ORDER BY name')]}
+        businesses=[dict(r) for r in c.execute('SELECT slug,name,created_at,active FROM tenants ORDER BY name')]
+    for business in businesses:
+        try:
+            path=tenant_path(business['slug'])
+            with tenant_context(business['slug'],path),conn() as db:
+                license_row=db.execute('SELECT expires_on,renewal_count FROM license_state WHERE id=1').fetchone()
+                business['expires_on']=license_row['expires_on'] if license_row else None
+                business['renewal_count']=license_row['renewal_count'] if license_row else 0
+                business['expired']=not license_row or business_today()>=datetime.date.fromisoformat(license_row['expires_on'])
+                business['users']=db.execute("SELECT COUNT(*) FROM users WHERE role='operator'").fetchone()[0]
+                business['tickets']=db.execute('SELECT COUNT(*) FROM tickets').fetchone()[0]
+                business['last_sale_at']=db.execute('SELECT MAX(created_at) FROM tickets').fetchone()[0]
+        except (HTTPException,sqlite3.Error):
+            business.update(expires_on=None,renewal_count=0,expired=True,users=0,tickets=0,last_sale_at=None,unavailable=True)
+    return {'rows':businesses}
 
 @app.post('/api/root/tenants')
 def create_tenant(x:TenantNew,authorization:str|None=Header(None)):
@@ -260,7 +284,24 @@ def admin_password_user(u,authorization):
 def list_users(authorization:str|None=Header(None)):
     admin(authorization)
     with conn() as c:
-        return {'rows':[dict(r) for r in c.execute("SELECT id,username,role FROM users WHERE username!='__jb360_root__' ORDER BY username")]}
+        return {'rows':[dict(r) for r in c.execute("SELECT id,username,role,active FROM users WHERE username!='__jb360_root__' ORDER BY username")]}
+
+@app.post('/api/admin/users/{user_id}/status')
+def set_user_status(user_id:int,x:UserStatus,authorization:str|None=Header(None)):
+    u=admin(authorization)
+    actual=admin_password_user(u,authorization)
+    if not hmac.compare_digest(actual['password_hash'],hashpw(x.admin_password,actual['salt'])):
+        raise HTTPException(403,'Contraseña administrativa incorrecta')
+    with conn() as c:
+        c.execute('BEGIN IMMEDIATE')
+        target=c.execute('SELECT username FROM users WHERE id=? AND role=?',(user_id,'operator')).fetchone()
+        if not target:raise HTTPException(404,'Operador inexistente')
+        c.execute('UPDATE users SET active=? WHERE id=?',(int(x.active),user_id))
+        if not x.active:c.execute('DELETE FROM tokens WHERE user_id=?',(user_id,))
+        c.execute('INSERT INTO audit(at,user_id,action,detail) VALUES(?,?,?,?)',
+                  (now(),u['id'],'enable_operator' if x.active else 'disable_operator',target['username']))
+        c.commit()
+    return {'ok':True,'active':x.active}
 
 @app.post('/api/account/password')
 def change_password(x:PasswordChange,authorization:str|None=Header(None)):
