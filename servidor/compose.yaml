@@ -3,7 +3,7 @@ services:
     build: .
     environment:
       JB360_DB: /data/jb360.sqlite3
-      JB360_ALLOWED_HOSTS: ${JB360_DOMAIN:?Indique JB360_DOMAIN en .env}
+      JB360_ALLOWED_HOSTS: ${JB360_DOMAIN:?Indique JB360_DOMAIN en .env},127.0.0.1,localhost
       PYTHONDONTWRITEBYTECODE: "1"
     volumes:
       - jb360_data:/data
