@@ -92,3 +92,42 @@ exported.blob.text().then(text=>{
 assert.ok(stored.has('jb360_demo_v1'));
 assert.equal(alerts.length,1,'only sale confirmation is shown');
 console.log('PASS: initial state, product/service, mixed sale, proportional refund, stock, cash, bank, reports, receipt, catalog edits, persistence');
+
+// A service-only receipt must appear as a service in all general reports.
+// Product and service codes are separate catalogs and may overlap.
+run('db=seed();cart=[]');
+sandbox.addProduct(event({id:'X',name:'Producto X',category:'General',price:200,cost:80,stock:5,min:0}));
+sandbox.addService(event({id:'X',name:'Servicio X',category:'General',price:120,cost:30,detail:'Insumos'}));
+sandbox.cartAdd(event({item:'S:X',qty:2}));
+sandbox.checkout(event({method:'Efectivo',cashAmount:0,transferAmount:0,cardAmount:0,seller:'Principal'}));
+assert.equal(run('db.sales[0].kind'),'service');
+assert.equal(run('db.products[0].stock'),5);
+run("report='ventas'");
+assert.deepEqual(Array.from(run('reportData().heads')).slice(1,4),['Operación','Tipo','Concepto']);
+assert.deepEqual(Array.from(run('reportData().rows[0]')).slice(1,3),['Venta','Servicio']);
+run("report='servicios'");
+assert.equal(run('reportData().rows[0][2]'),run('money(240)'));
+assert.equal(run('reportData().rows[0][3]'),run('money(60)'));
+run("report='productos'");
+assert.equal(run('reportData().rows.length'),0);
+run("report='ingresos'");
+assert.equal(run('reportData().rows[0][1]'),1);
+sandbox.refund(event({id:run('db.sales[0].id'),qty:1}));
+assert.equal(run('db.products[0].stock'),5,'service refund cannot restore product stock with the same code');
+assert.equal(run('db.inventory.filter(x=>x.type===\'devolucion\').length'),0);
+assert.equal(run('totals().revenue'),120);
+assert.equal(run('totals().cogs'),30);
+run("report='ventas'");
+assert.deepEqual(Array.from(run('reportData().rows[1]')).slice(1,3),['Devolución','Servicio']);
+run("report='costos'");
+assert.equal(run('reportData().rows[0][0]'),'Servicio');
+run("report='servicios'");
+assert.equal(run('reportData().rows[0][2]'),run('money(120)'));
+assert.equal(run('reportData().rows[0][3]'),run('money(30)'));
+sandbox.exportAuxBook('ingresos');
+exported.blob.text().then(csv=>{
+  assert.match(csv,/"Operación";"Tipo"/);
+  assert.match(csv,/"Venta";"Servicio"/);
+  assert.match(csv,/"Devolución";"Servicio"/);
+  console.log('PASS: sale and refund of service-only receipt, categorized reports and CSV, catalog code collision');
+}).catch(e=>{console.error(e);process.exitCode=1});
