@@ -21,8 +21,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Habilitar y configurar Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - name: Preparar archivos estaticos
         uses: actions/upload-pages-artifact@v3
         with:
