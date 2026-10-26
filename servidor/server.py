@@ -1,8 +1,10 @@
 """JB360 shared operations pilot. NOT a certified fiscal accounting engine."""
-import os, sqlite3, hmac, hashlib, secrets, datetime, json, csv, io, time, tempfile
+import os, sqlite3, hmac, hashlib, secrets, datetime, json, csv, io, time, tempfile, re
+from pathlib import Path
+from contextvars import ContextVar
+from contextlib import contextmanager
 from zoneinfo import ZoneInfo
 from decimal import Decimal, InvalidOperation
-from contextlib import contextmanager
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, FileResponse
 from starlette.background import BackgroundTask
@@ -14,6 +16,29 @@ ADMIN_PASSWORD=os.environ.get('JB360_ADMIN_PASSWORD')
 app=FastAPI(title='JB360 operaciones compartidas - piloto')
 allowed_hosts=[x.strip() for x in os.environ.get('JB360_ALLOWED_HOSTS','127.0.0.1,localhost,testserver').split(',') if x.strip()]
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+tenant_db:ContextVar[str|None]=ContextVar('jb360_tenant_db',default=None)
+tenant_slug:ContextVar[str|None]=ContextVar('jb360_tenant_slug',default=None)
+
+@app.middleware('http')
+async def select_tenant(request:Request,call_next):
+    # Every client request uses the tenant bound to its session token. A root
+    # session can explicitly select a business to administer it.
+    if request.url.path.startswith('/api/') and request.url.path!='/api/login':
+        auth=request.headers.get('authorization','')
+        token=auth[7:] if auth.startswith('Bearer ') else ''
+        match=re.fullmatch(r'tenant\.([a-z0-9-]{3,40})\.[A-Za-z0-9_-]+',token)
+        selected=request.headers.get('x-jb360-cliente','').strip()
+        if match and selected and selected!=match.group(1):
+            return JSONResponse({'detail':'La sesión pertenece a otro cliente'},status_code=403)
+        if match or (token.startswith('root.') and selected):
+            slug=match.group(1) if match else selected
+            try:path=tenant_path(slug)
+            except HTTPException as exc:
+                return JSONResponse({'detail':exc.detail},status_code=exc.status_code)
+            db_token=tenant_db.set(str(path));slug_token=tenant_slug.set(slug)
+            try:return await call_next(request)
+            finally:tenant_slug.reset(slug_token);tenant_db.reset(db_token)
+    return await call_next(request)
 
 @app.middleware('http')
 async def security_headers(request:Request,call_next):
@@ -43,8 +68,9 @@ def cents(v):
         return int(n*100)
     except (InvalidOperation,ValueError,TypeError): raise HTTPException(422,'Importe positivo con dos decimales como máximo')
 
-def conn():
-    c=sqlite3.connect(os.environ.get('JB360_DB',DB),timeout=30,isolation_level=None)
+def root_db():return os.environ.get('JB360_DB',DB)
+def conn(root=False):
+    c=sqlite3.connect(root_db() if root else (tenant_db.get() or root_db()),timeout=30,isolation_level=None)
     c.row_factory=sqlite3.Row
     c.execute('PRAGMA journal_mode=WAL');c.execute('PRAGMA busy_timeout=30000');c.execute('PRAGMA foreign_keys=ON')
     return c
@@ -60,15 +86,53 @@ def init():
         CREATE INDEX IF NOT EXISTS ix_operations_period ON operations(effective_date,point,kind);
         ''')
 
-def hashpw(p,s): return hashlib.pbkdf2_hmac('sha256',p.encode(),bytes.fromhex(s),250000).hex()
-def require(auth, allow_expired=False):
-    if not auth or not auth.startswith('Bearer '): raise HTTPException(401,'Se requiere sesión')
-    with conn() as c:
+def tenant_path(slug):
+    if not re.fullmatch(r'[a-z][a-z0-9-]{2,39}',slug) or slug=='root':
+        raise HTTPException(422,'Código de cliente inválido')
+    with conn(root=True) as c:
+        try:record=c.execute('SELECT active FROM tenants WHERE slug=?',(slug,)).fetchone()
+        except sqlite3.OperationalError:record=None
+    if not record or not record['active']:raise HTTPException(404,'Cliente no registrado o desactivado')
+    path=Path(root_db()).resolve().parent/(Path(root_db()).stem+'-tenants')/(slug+'.sqlite3')
+    if not path.is_file() or path.is_symlink():raise HTTPException(503,'Datos del cliente no disponibles')
+    return path
+
+@contextmanager
+def tenant_context(slug,path):
+    db_token=tenant_db.set(str(path));slug_token=tenant_slug.set(slug)
+    try:yield
+    finally:tenant_slug.reset(slug_token);tenant_db.reset(db_token)
+
+def token_user(auth,root=False):
+    if not auth or not auth.startswith('Bearer '):raise HTTPException(401,'Se requiere sesión')
+    with conn(root=root) as c:
         row=c.execute('SELECT users.*,tokens.created_at AS token_created_at FROM tokens JOIN users ON users.id=tokens.user_id WHERE tokens.token_hash=?',(hashlib.sha256(auth[7:].encode()).hexdigest(),)).fetchone()
-    if row is None: raise HTTPException(401,'Sesión inválida')
+    if row is None:raise HTTPException(401,'Sesión inválida')
     created=datetime.datetime.fromisoformat(row['token_created_at'])
     if datetime.datetime.now(datetime.timezone.utc)-created>datetime.timedelta(hours=12):
         raise HTTPException(401,'Sesión caducada; inicie sesión de nuevo')
+    return row
+
+def root_admin(auth):
+    if tenant_slug.get() or not auth or not auth.startswith('Bearer root.'):
+        raise HTTPException(403,'Solo administrador general')
+    u=token_user(auth,root=True)
+    if u['role']!='admin':raise HTTPException(403,'Solo administrador general')
+    return u
+
+def hashpw(p,s): return hashlib.pbkdf2_hmac('sha256',p.encode(),bytes.fromhex(s),250000).hex()
+def require(auth, allow_expired=False):
+    if not auth or not auth.startswith('Bearer '): raise HTTPException(401,'Se requiere sesión')
+    tok=auth[7:];slug=tenant_slug.get()
+    if slug and tok.startswith('root.'):
+        root_user=token_user(auth,root=True)
+        if root_user['role']!='admin':raise HTTPException(403,'Solo administrador general')
+        with conn() as c:row=c.execute("SELECT * FROM users WHERE username='__jb360_root__' AND role='admin'").fetchone()
+        if not row:raise HTTPException(503,'Cuenta de control del cliente no disponible')
+    else:
+        if slug and not tok.startswith('tenant.'+slug+'.'):raise HTTPException(401,'Sesión de otro cliente')
+        if not slug and tok.startswith('tenant.'):raise HTTPException(401,'Sesión de otro cliente')
+        row=token_user(auth)
     if row['role']!='admin' and not allow_expired:
         with conn() as c:
             try: license_row=c.execute('SELECT expires_on FROM license_state WHERE id=1').fetchone()
@@ -82,8 +146,9 @@ def admin(auth):
     if u['role']!='admin':raise HTTPException(403,'Solo administrador')
     return u
 
-class Login(BaseModel): username:str=Field(min_length=1,max_length=60); password:str=Field(min_length=1,max_length=128)
+class Login(BaseModel): username:str=Field(min_length=1,max_length=60); password:str=Field(min_length=1,max_length=128); tenant:str=''
 class UserNew(BaseModel):username:str=Field(min_length=3,max_length=60);password:str=Field(min_length=12,max_length=128);role:str='operator'
+class TenantNew(BaseModel):slug:str=Field(pattern=r'^[a-z][a-z0-9-]{2,39}$');name:str=Field(min_length=3,max_length=160);username:str=Field(min_length=3,max_length=60);password:str=Field(min_length=12,max_length=128)
 class Operation(BaseModel):kind:str;category:str=Field(min_length=1,max_length=80);description:str=Field(min_length=1,max_length=300);amount:str;payment:str=Field(min_length=1,max_length=40);point:str=Field(min_length=1,max_length=80);reference:str=Field(min_length=1,max_length=100);actor:str=Field(min_length=1,max_length=30);effective_date:datetime.date
 class Reverse(BaseModel):reason:str=Field(min_length=5,max_length=500)
 class BackupRequest(BaseModel):password:str
@@ -92,6 +157,7 @@ class BackupRequest(BaseModel):password:str
 def start():
     init()
     with conn() as c:
+        c.execute('CREATE TABLE IF NOT EXISTS tenants(slug TEXT PRIMARY KEY,name TEXT NOT NULL,created_at TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1)')
         if not c.execute('SELECT 1 FROM users').fetchone():
             if not ADMIN_PASSWORD or len(ADMIN_PASSWORD)<14:
                 raise RuntimeError('Configure JB360_ADMIN_PASSWORD con al menos 14 caracteres antes del primer arranque')
@@ -99,6 +165,12 @@ def start():
 
 @app.post('/api/login')
 def login(x:Login,request:Request):
+    if x.tenant:
+        path=tenant_path(x.tenant)
+        with tenant_context(x.tenant,path):return login_in_database(x,request,'tenant.'+x.tenant+'.')
+    return login_in_database(x,request,'root.')
+
+def login_in_database(x,request,prefix):
     ip=request.client.host if request.client else 'unknown'
     epoch=int(time.time())
     with conn() as c:
@@ -113,14 +185,59 @@ def login(x:Login,request:Request):
             c.commit()
             raise HTTPException(401,'Credenciales incorrectas')
         c.execute('DELETE FROM login_failures WHERE username=? AND ip=?',(x.username,ip))
-        t=secrets.token_urlsafe(40);c.execute('INSERT INTO tokens VALUES(?,?,?)',(hashlib.sha256(t.encode()).hexdigest(),u['id'],now()))
+        if u['username']=='__jb360_root__':raise HTTPException(403,'Cuenta reservada')
+        t=prefix+secrets.token_urlsafe(40);c.execute('INSERT INTO tokens VALUES(?,?,?)',(hashlib.sha256(t.encode()).hexdigest(),u['id'],now()))
         c.commit()
-        return {'token':t,'role':u['role']}
+        return {'token':t,'role':u['role'],'tenant':x.tenant}
+
+@app.get('/api/root/tenants')
+def list_tenants(authorization:str|None=Header(None)):
+    root_admin(authorization)
+    with conn(root=True) as c:
+        return {'rows':[dict(r) for r in c.execute('SELECT slug,name,created_at,active FROM tenants ORDER BY name')]}
+
+@app.post('/api/root/tenants')
+def create_tenant(x:TenantNew,authorization:str|None=Header(None)):
+    u=root_admin(authorization)
+    if x.slug=='root' or x.username=='__jb360_root__':raise HTTPException(422,'Identificador reservado')
+    directory=Path(root_db()).resolve().parent/(Path(root_db()).stem+'-tenants')
+    directory.mkdir(mode=0o700,exist_ok=True)
+    if directory.is_symlink():raise HTTPException(503,'Directorio de clientes inseguro')
+    path=directory/(x.slug+'.sqlite3')
+    with conn(root=True) as c:
+        c.execute('BEGIN IMMEDIATE')
+        if c.execute('SELECT 1 FROM tenants WHERE slug=?',(x.slug,)).fetchone() or path.exists():
+            raise HTTPException(409,'Código de cliente ya registrado')
+        # The business DB is created while the directory row is locked. Never
+        # trust a client supplied file path or put two businesses in one DB.
+        try:
+            with tenant_context(x.slug,path):
+                init()
+                import extension,commercial,catalogo_api,versat_bridge,vector_fiscal,normativa_control
+                extension.setup();commercial.setup_parties();catalogo_api.setup();versat_bridge.setup()
+                vector_fiscal.setup();normativa_control.setup()
+                with conn() as business:
+                    for username,password,role in (
+                        ('__jb360_root__',secrets.token_urlsafe(48),'admin'),
+                        (x.username,x.password,'operator')):
+                        salt=secrets.token_hex(16)
+                        business.execute('INSERT INTO users(username,salt,password_hash,role) VALUES(?,?,?,?)',
+                                         (username,salt,hashpw(password,salt),role))
+            c.execute('INSERT INTO tenants(slug,name,created_at,active) VALUES(?,?,?,1)',(x.slug,x.name,now()))
+            c.execute('INSERT INTO audit(at,user_id,action,detail) VALUES(?,?,?,?)',(now(),u['id'],'create_tenant',x.slug))
+            c.commit()
+        except Exception:
+            for suffix in ('','-wal','-shm'):
+                try:(Path(str(path)+suffix)).unlink(missing_ok=True)
+                except OSError:pass
+            raise
+    return {'ok':True,'slug':x.slug,'name':x.name,'license':'PENDIENTE'}
 
 @app.post('/api/logout')
 def logout(authorization:str|None=Header(None)):
     require(authorization,allow_expired=True)
-    with conn() as c:c.execute('DELETE FROM tokens WHERE token_hash=?',(hashlib.sha256(authorization[7:].encode()).hexdigest(),))
+    with conn(root=authorization[7:].startswith('root.')) as c:
+        c.execute('DELETE FROM tokens WHERE token_hash=?',(hashlib.sha256(authorization[7:].encode()).hexdigest(),))
     return {'ok':True}
 
 @app.post('/api/users')
@@ -209,7 +326,8 @@ def audit(start:datetime.date,end:datetime.date,authorization:str|None=Header(No
 @app.post('/api/admin/backup')
 def backup_download(x:BackupRequest,authorization:str|None=Header(None)):
     u=admin(authorization)
-    if not hmac.compare_digest(u['password_hash'],hashpw(x.password,u['salt'])):
+    password_user=token_user(authorization,root=True) if tenant_slug.get() and authorization.startswith('Bearer root.') else u
+    if not hmac.compare_digest(password_user['password_hash'],hashpw(x.password,password_user['salt'])):
         raise HTTPException(403,'Contraseña administrativa incorrecta')
     fd,path=tempfile.mkstemp(prefix='jb360-backup-',suffix='.sqlite3')
     os.close(fd)
