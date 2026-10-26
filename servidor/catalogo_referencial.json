@@ -1,7 +1,7 @@
 {
   "estado": "PARCIAL_VERIFICACION_PENDIENTE",
-  "fecha_corte": "2026-10-25",
-  "aviso": "Referencial; no exhaustivo. Fuente primaria: Gaceta 39 Extraordinaria 2016 y 78 Ordinaria 2019. Sin contabilizacion automatica.",
+  "fecha_corte": "2026-10-26",
+  "aviso": "Catálogo parcial no apto para asientos automáticos. El anexo TCP de Res. 346/2021 fue derogado por Res. 272/2024; no se muestra como plan vigente. Cotejar uso y contenido completos con la norma aplicable.",
   "fuentes": [
     {
       "norma": "Res. 494/2016 MFP",
@@ -12,107 +12,11 @@
       "url": "https://www.gacetaoficial.gob.cu/sites/default/files/goc-2019-o78.pdf"
     },
     {
-      "norma": "Res. 346/2021 MFP, GO 94/2021",
-      "url": "https://oncubanews.com/wp-content/uploads/2024/03/goc-2021-o94-1.pdf"
+      "norma": "Res. 272/2024 MFP, contabilidad TCP",
+      "url": "https://www.gacetaoficial.gob.cu/es/resolucion-272-de-2024-de-ministerio-de-finanzas-y-precios"
     }
   ],
   "cuentas": [
-    {
-      "regimen": "tcp",
-      "codigo": "100",
-      "nombre": "Efectivo en Caja",
-      "naturaleza": "activo",
-      "uso_resumen": "Cobros en efectivo y pagos desde caja",
-      "fundamento": "Res. 346/2021, anexo 3"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "110",
-      "nombre": "Efectivo en Banco",
-      "naturaleza": "activo",
-      "uso_resumen": "Depósitos y pagos bancarios",
-      "fundamento": "Res. 346/2021, anexo 3"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "470",
-      "nombre": "Préstamos Bancarios a Corto Plazo",
-      "naturaleza": "pasivo",
-      "uso_resumen": "Obligaciones bancarias a corto plazo",
-      "fundamento": "Res. 346/2021, anexo 2"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "520",
-      "nombre": "Préstamos Bancarios a Largo Plazo",
-      "naturaleza": "pasivo",
-      "uso_resumen": "Obligaciones bancarias a largo plazo",
-      "fundamento": "Res. 346/2021, anexo 2"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "600",
-      "nombre": "Patrimonio del TCP",
-      "naturaleza": "patrimonio",
-      "uso_resumen": "Aportes y movimientos patrimoniales",
-      "fundamento": "Res. 346/2021, anexo 2"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "610",
-      "nombre": "Utilidad Retenida",
-      "naturaleza": "patrimonio",
-      "uso_resumen": "Utilidades acumuladas",
-      "fundamento": "Res. 346/2021, anexo 2"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "620",
-      "nombre": "Pérdida",
-      "naturaleza": "patrimonio",
-      "uso_resumen": "Pérdidas registradas",
-      "fundamento": "Res. 346/2021, anexo 2"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "800",
-      "nombre": "Gastos de Operación",
-      "naturaleza": "gasto",
-      "uso_resumen": "Gastos de operación según reglas del régimen",
-      "fundamento": "Res. 346/2021, anexo 2"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "810",
-      "nombre": "Impuestos y Tasas",
-      "naturaleza": "gasto",
-      "uso_resumen": "Impuestos y tasas según subcuentas aplicables",
-      "fundamento": "Res. 346/2021, anexo 2"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "820",
-      "nombre": "Gastos de Capital",
-      "naturaleza": "gasto",
-      "uso_resumen": "Erogaciones de capital conforme a normativa específica",
-      "fundamento": "Res. 346/2021, anexo 2"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "900",
-      "nombre": "Ventas cobradas",
-      "naturaleza": "ingreso",
-      "uso_resumen": "Ventas cobradas",
-      "fundamento": "Res. 346/2021, anexo 2"
-    },
-    {
-      "regimen": "tcp",
-      "codigo": "999",
-      "nombre": "Resultado",
-      "naturaleza": "resultado",
-      "uso_resumen": "Cuenta de cierre",
-      "fundamento": "Res. 346/2021, anexo 2"
-    },
     {
       "regimen": "empresarial",
       "codigo": "350",
